@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Shield, LayoutDashboard, MessageSquare, User, LogOut, Home, Bell } from 'lucide-react';
+import { Shield, LayoutDashboard, MessageSquare, User, LogOut, Home, Bell, Menu } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,14 +11,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 export function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
+    setMobileMenuOpen(false);
     navigate('/');
+  };
+
+  const handleNavigate = (path: string) => {
+    setMobileMenuOpen(false);
+    navigate(path);
   };
 
   return (
@@ -28,25 +43,26 @@ export function Navbar() {
           <span className="text-xl font-bold">Hedge</span>
         </Link>
 
-        <div className="flex items-center gap-4">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-4">
           {user ? (
             <>
               <Link to="/home">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Home className="h-4 w-4" />
-                  <span className="hidden sm:inline">Home</span>
+                  <span>Home</span>
                 </Button>
               </Link>
               <Link to="/dashboard">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
+                  <span>Dashboard</span>
                 </Button>
               </Link>
               <Link to="/chat">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <MessageSquare className="h-4 w-4" />
-                  <span className="hidden sm:inline">Chat</span>
+                  <span>Chat</span>
                 </Button>
               </Link>
               <Button variant="ghost" size="sm" className="gap-2 relative">
@@ -88,6 +104,106 @@ export function Navbar() {
               </Link>
             </>
           )}
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex items-center gap-2">
+          {user && (
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+                3
+              </span>
+            </Button>
+          )}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Shield className="h-6 w-6 text-primary" />
+                  Hedge
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-2 mt-6">
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted mb-4">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {user.email?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{user.email}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/home')}
+                    >
+                      <Home className="h-5 w-5" />
+                      Home
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/dashboard')}
+                    >
+                      <LayoutDashboard className="h-5 w-5" />
+                      Dashboard
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/chat')}
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                      Chat
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/profile')}
+                    >
+                      <User className="h-5 w-5" />
+                      Profile
+                    </Button>
+                    <div className="border-t my-2" />
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12 text-destructive hover:text-destructive"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/auth')}
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      className="justify-start gap-3 h-12"
+                      onClick={() => handleNavigate('/auth?mode=signup')}
+                    >
+                      Get Started
+                    </Button>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>
