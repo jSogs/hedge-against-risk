@@ -27,16 +27,16 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/auth?mode=signup">
-                <Button size="lg" className="gap-2 glow">
+              <Button size="lg" className="gap-2 glow" asChild>
+                <Link to="/auth?mode=signup">
                   Get Started <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/auth">
-                <Button size="lg" variant="outline">
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/auth">
                   Sign In
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -94,11 +94,11 @@ export default function Landing() {
             <p className="text-muted-foreground mb-8">
               Join thousands of users who are already protecting themselves with Hedge AI.
             </p>
-            <Link to="/auth?mode=signup">
-              <Button size="lg" className="gap-2">
+            <Button size="lg" className="gap-2" asChild>
+              <Link to="/auth?mode=signup">
                 Start Free <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
