@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layout } from '@/components/layout/Layout';
-import { SearchBar } from '@/components/search/SearchBar';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Layout } from "@/components/layout/Layout";
+import { SearchBar } from "@/components/search/SearchBar";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendingUp, AlertTriangle, Loader2 } from "lucide-react";
 
-import type { Tables } from '@/integrations/supabase/types';
+import type { Tables } from "@/integrations/supabase/types";
 
-type Profile = Tables<'profiles'>;
+type Profile = Tables<"profiles">;
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -19,7 +19,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/');
+      navigate("/");
       return;
     }
 
@@ -30,15 +30,11 @@ export default function Home() {
 
   const fetchProfile = async () => {
     if (!user) return;
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+
+    const { data, error } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
 
     if (error || !data) {
-      navigate('/onboarding');
+      navigate("/onboarding");
       return;
     }
 
@@ -56,7 +52,7 @@ export default function Home() {
     );
   }
 
-  const userName = (profile?.profile_json as { name?: string })?.name || user?.email?.split('@')[0] || 'there';
+  const userName = (profile?.profile_json as { name?: string })?.name || user?.email?.split("@")[0] || "there";
 
   return (
     <Layout>
@@ -67,7 +63,7 @@ export default function Home() {
             Welcome back, <span className="text-gradient">{userName}</span>
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            What risk would you like to hedge today? Search for events, markets, or scenarios.
+            What risk would you like to hedge today? Ask about events, markets, or real-world scenarios.
           </p>
           <SearchBar large />
         </section>
@@ -76,33 +72,29 @@ export default function Home() {
         <section className="py-12">
           <h2 className="text-xl font-semibold mb-6">Quick Actions</h2>
           <div className="grid sm:grid-cols-2 gap-6">
-            <Card 
+            <Card
               className="glass cursor-pointer hover:border-primary transition-colors"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate("/dashboard")}
             >
               <CardHeader>
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <CardTitle className="text-lg">View Dashboard</CardTitle>
-                <CardDescription>
-                  Monitor your active hedges and recommendations
-                </CardDescription>
+                <CardDescription>Monitor your active hedges and recommendations</CardDescription>
               </CardHeader>
             </Card>
 
-            <Card 
+            <Card
               className="glass cursor-pointer hover:border-primary transition-colors"
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate("/profile")}
             >
               <CardHeader>
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                   <AlertTriangle className="h-5 w-5 text-primary" />
                 </div>
                 <CardTitle className="text-lg">Update Risk Profile</CardTitle>
-                <CardDescription>
-                  Refine your risk preferences and sensitivities
-                </CardDescription>
+                <CardDescription>Refine your risk preferences and sensitivities</CardDescription>
               </CardHeader>
             </Card>
           </div>
