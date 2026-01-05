@@ -16,6 +16,19 @@ interface Recommendation {
   created_at: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
+async function runRecommendations(userId: string) {
+  const res = await fetch(`${API_URL}/v1/recommendations/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, limit: 5 }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -35,18 +48,49 @@ export default function Dashboard() {
 
   const fetchRecommendations = async () => {
     if (!user) return;
-
+  
+    setLoading(true);
+  
+    // 1) Try DB first
     const { data, error } = await supabase
-      .from('recommendations')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setRecommendations(data);
+      .from("recommendations")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+  
+    if (error) {
+      setLoading(false);
+      return;
     }
+  
+    // 2) If none, run backend to generate + store, then refetch
+    if (!data || data.length === 0) {
+      try {
+        await runRecommendations(user.id);
+  
+        const { data: data2 } = await supabase
+          .from("recommendations")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+  
+        if (data2) setRecommendations(data2);
+      } catch (e) {
+        // optional: show toast
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+  
+    // 3) Otherwise use cached DB data
+    setRecommendations(data);
     setLoading(false);
   };
+  
 
   if (authLoading || loading) {
     return (
