@@ -33,6 +33,7 @@ import {
 
 interface ProfileJson {
   name?: string;
+  description?: string;
   exposure_range?: string;
   hedge_budget?: string;
   debt_exposures?: string[];
@@ -66,6 +67,7 @@ export default function Profile() {
   const [selectedDebt, setSelectedDebt] = useState<string[]>([]);
   const [selectedTopExpenses, setSelectedTopExpenses] = useState<string[]>([]);
   const [protectAgainst, setProtectAgainst] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -97,6 +99,7 @@ export default function Profile() {
 
     if (data.profile_type === 'business') {
       setCompanyName(profileJson?.name || '');
+      setDescription(profileJson?.description || '');
       setIndustry(data.industry || '');
       setLocation(data.region || '');
       setSelectedExposures(data.sensitivities || []);
@@ -107,6 +110,7 @@ export default function Profile() {
       setExposureRange([rangeIndex >= 0 ? rangeIndex : 1]);
     } else {
       setIndividualLocation(data.region || '');
+      setDescription(profileJson?.description || '');
       setSelectedBudgetImpacts(data.sensitivities || []);
       setIndividualPlanningWindow(data.risk_horizon || '90d');
       setIndividualRiskStyle(data.risk_style);
@@ -170,6 +174,7 @@ export default function Profile() {
             sensitivities: selectedExposures,
             profile_json: { 
               name: companyName,
+              description: description || null,
               exposure_range: exposureLabel,
             },
           })
@@ -187,6 +192,7 @@ export default function Profile() {
             risk_horizon: individualPlanningWindow,
             sensitivities: selectedBudgetImpacts,
             profile_json: { 
+              description: description || null,
               hedge_budget: budgetLabel,
               debt_exposures: selectedDebt,
               top_expenses: selectedTopExpenses,
@@ -270,6 +276,17 @@ export default function Profile() {
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="Enter your company name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessDescription">Describe your business <span className="text-muted-foreground">(optional)</span></Label>
+                    <Textarea
+                      id="businessDescription"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="E.g., We're a regional trucking company with 50 vehicles, concerned about fuel price volatility..."
+                      className="min-h-[80px] resize-none"
                     />
                   </div>
 
@@ -464,18 +481,32 @@ export default function Profile() {
             </>
           ) : (
             <>
-              {/* Individual Location */}
+              {/* Individual Location & About */}
               <Card className="glass">
                 <CardHeader>
-                  <CardTitle>Location</CardTitle>
-                  <CardDescription>Where are you located?</CardDescription>
+                  <CardTitle>About You</CardTitle>
+                  <CardDescription>Your location and background</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <LocationCombobox
-                    value={individualLocation}
-                    onChange={setIndividualLocation}
-                    placeholder="Search for your location..."
-                  />
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label>Location</Label>
+                    <LocationCombobox
+                      value={individualLocation}
+                      onChange={setIndividualLocation}
+                      placeholder="Search for your location..."
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="individualDescription">Tell us about yourself <span className="text-muted-foreground">(optional)</span></Label>
+                    <Textarea
+                      id="individualDescription"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="E.g., I'm a freelance designer living in NYC, worried about rising costs..."
+                      className="min-h-[80px] resize-none"
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
