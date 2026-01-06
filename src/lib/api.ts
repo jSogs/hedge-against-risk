@@ -68,3 +68,26 @@ export async function getUnreadCount(userId: string): Promise<number> {
   const data = await res.json();
   return data.unread_count;
 }
+
+export type UserAction = 'clicked' | 'dismissed' | 'saved' | 'executed_elsewhere';
+
+export async function logAction(
+  userId: string,
+  recommendationId: string,
+  action: UserAction,
+  meta: Record<string, unknown> = {}
+): Promise<void> {
+  const { supabase } = await import('@/integrations/supabase/client');
+  
+  const { error } = await supabase.from('actions').insert({
+    user_id: userId,
+    recommendation_id: recommendationId,
+    action: action as 'clicked' | 'dismissed' | 'saved' | 'executed_elsewhere',
+    meta: meta as unknown as Record<string, never>,
+  });
+  
+  if (error) {
+    console.error('Failed to log action:', error);
+    throw error;
+  }
+}

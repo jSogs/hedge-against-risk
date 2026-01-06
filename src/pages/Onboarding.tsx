@@ -54,6 +54,8 @@ export default function Onboarding() {
   const [selectedDebt, setSelectedDebt] = useState<string[]>([]);
   const [selectedTopExpenses, setSelectedTopExpenses] = useState<string[]>([]);
   const [protectAgainst, setProtectAgainst] = useState('');
+  const [individualDescription, setIndividualDescription] = useState('');
+  const [businessDescription, setBusinessDescription] = useState('');
   const [individualDocuments, setIndividualDocuments] = useState<string[]>([]);
   const [businessDocuments, setBusinessDocuments] = useState<string[]>([]);
   
@@ -139,6 +141,7 @@ export default function Onboarding() {
           sensitivities: selectedExposures,
           profile_json: { 
             name: companyName,
+            description: businessDescription || null,
             exposure_range: exposureLabel,
           },
         });
@@ -156,6 +159,7 @@ export default function Onboarding() {
           risk_horizon: individualPlanningWindow,
           sensitivities: selectedBudgetImpacts,
           profile_json: { 
+            description: individualDescription || null,
             hedge_budget: budgetLabel,
             debt_exposures: selectedDebt,
             top_expenses: selectedTopExpenses,
@@ -314,6 +318,16 @@ export default function Onboarding() {
                     value={individualLocation}
                     onChange={setIndividualLocation}
                     placeholder="Search for your location..."
+                  />
+                </div>
+                
+                <div className="space-y-3">
+                  <Label>Tell us about yourself <span className="text-muted-foreground">(optional)</span></Label>
+                  <Textarea
+                    value={individualDescription}
+                    onChange={(e) => setIndividualDescription(e.target.value)}
+                    placeholder="E.g., I'm a freelance designer living in NYC, worried about rising costs..."
+                    className="min-h-[80px] resize-none"
                   />
                 </div>
               </CardContent>
@@ -674,6 +688,16 @@ export default function Onboarding() {
                   value={location}
                   onChange={setLocation}
                   placeholder="Search for your location..."
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <Label>Describe your business <span className="text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  value={businessDescription}
+                  onChange={(e) => setBusinessDescription(e.target.value)}
+                  placeholder="E.g., We're a regional trucking company with 50 vehicles, concerned about fuel price volatility..."
+                  className="min-h-[80px] resize-none"
                 />
               </div>
             </CardContent>

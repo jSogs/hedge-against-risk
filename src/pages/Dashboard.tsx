@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,8 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Clock, CheckCircle, Loader2, ExternalLink, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, Clock, CheckCircle, Loader2, ExternalLink, DollarSign, X, Undo2 } from 'lucide-react';
 import { Json } from '@/integrations/supabase/types';
+import { logAction } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Recommendation {
   id: string;
@@ -42,7 +45,9 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissedRecs, setDismissedRecs] = useState<Map<string, { rec: Recommendation; timeout: NodeJS.Timeout }>>(new Map());
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -106,7 +111,81 @@ export default function Dashboard() {
     setRecommendations(data as Recommendation[]);
     setLoading(false);
   };
-  
+
+  const handleDismiss = useCallback((rec: Recommendation) => {
+    if (!user) return;
+    
+    // Remove from visible list
+    setRecommendations(prev => prev.filter(r => r.id !== rec.id));
+    
+    // Set up undo timeout (5 seconds)
+    const timeout = setTimeout(async () => {
+      // Actually log the action after undo period
+      try {
+        await logAction(user.id, rec.id, 'dismissed');
+      } catch (e) {
+        console.error('Failed to log dismiss action:', e);
+      }
+      setDismissedRecs(prev => {
+        const next = new Map(prev);
+        next.delete(rec.id);
+        return next;
+      });
+    }, 5000);
+    
+    setDismissedRecs(prev => new Map(prev).set(rec.id, { rec, timeout }));
+    
+    toast({
+      title: "Recommendation dismissed",
+      description: "You won't see this recommendation again.",
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleUndo(rec.id)}
+          className="gap-1"
+        >
+          <Undo2 className="h-3 w-3" />
+          Undo
+        </Button>
+      ),
+    });
+  }, [user, toast]);
+
+  const handleUndo = useCallback((recId: string) => {
+    const dismissed = dismissedRecs.get(recId);
+    if (!dismissed) return;
+    
+    // Clear the timeout so action isn't logged
+    clearTimeout(dismissed.timeout);
+    
+    // Add back to recommendations
+    setRecommendations(prev => [dismissed.rec, ...prev].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    ));
+    
+    setDismissedRecs(prev => {
+      const next = new Map(prev);
+      next.delete(recId);
+      return next;
+    });
+    
+    toast({ title: "Recommendation restored" });
+  }, [dismissedRecs, toast]);
+
+  const handleKalshiClick = useCallback(async (rec: Recommendation, url: string) => {
+    if (!user) return;
+    
+    // Log the click action
+    try {
+      await logAction(user.id, rec.id, 'clicked', { url });
+    } catch (e) {
+      console.error('Failed to log click action:', e);
+    }
+    
+    // Open in new tab
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [user]);
 
   if (authLoading || loading) {
     return (
@@ -162,15 +241,27 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="all">
-            <RecommendationsList recommendations={recommendations} />
+            <RecommendationsList 
+              recommendations={recommendations} 
+              onDismiss={handleDismiss}
+              onKalshiClick={handleKalshiClick}
+            />
           </TabsContent>
 
           <TabsContent value="hedge_now">
-            <RecommendationsList recommendations={hedgeNow} />
+            <RecommendationsList 
+              recommendations={hedgeNow} 
+              onDismiss={handleDismiss}
+              onKalshiClick={handleKalshiClick}
+            />
           </TabsContent>
 
           <TabsContent value="watching">
-            <RecommendationsList recommendations={waiting} />
+            <RecommendationsList 
+              recommendations={waiting} 
+              onDismiss={handleDismiss}
+              onKalshiClick={handleKalshiClick}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -178,7 +269,13 @@ export default function Dashboard() {
   );
 }
 
-function RecommendationsList({ recommendations }: { recommendations: Recommendation[] }) {
+interface RecommendationsListProps {
+  recommendations: Recommendation[];
+  onDismiss: (rec: Recommendation) => void;
+  onKalshiClick: (rec: Recommendation, url: string) => void;
+}
+
+function RecommendationsList({ recommendations, onDismiss, onKalshiClick }: RecommendationsListProps) {
   if (recommendations.length === 0) {
     return (
       <Card className="glass">
@@ -243,29 +340,39 @@ function RecommendationsList({ recommendations }: { recommendations: Recommendat
                     {rec.rationale || 'No rationale provided'}
                   </p>
 
-                  {/* Price info */}
-                  <div className="flex items-center gap-4 text-sm">
-                    {rec.price_now !== null && (
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>Current: <strong>{(rec.price_now * 100).toFixed(0)}¢</strong></span>
-                      </div>
-                    )}
-                    {rec.price_threshold !== null && (
-                      <div className="text-muted-foreground">
-                        Target: {(rec.price_threshold * 100).toFixed(0)}¢
-                      </div>
-                    )}
-                    {kalshiUrl && (
-                      <a
-                        href={kalshiUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary hover:underline"
-                      >
-                        View on Kalshi <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
+                  {/* Price info and actions */}
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4 text-sm">
+                      {rec.price_now !== null && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span>Current: <strong>{(rec.price_now * 100).toFixed(0)}¢</strong></span>
+                        </div>
+                      )}
+                      {rec.price_threshold !== null && (
+                        <div className="text-muted-foreground">
+                          Target: {(rec.price_threshold * 100).toFixed(0)}¢
+                        </div>
+                      )}
+                      {kalshiUrl && (
+                        <button
+                          onClick={() => onKalshiClick(rec, kalshiUrl)}
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          View on Kalshi <ExternalLink className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDismiss(rec)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Not interested
+                    </Button>
                   </div>
                 </div>
               </div>
