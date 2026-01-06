@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Shield, LayoutDashboard, MessageSquare, User, LogOut, Home, Bell, Menu } from 'lucide-react';
+import { Shield, LayoutDashboard, MessageSquare, User, LogOut, Home, Menu } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
+import { MobileNotificationsDropdown } from '@/components/notifications/MobileNotificationsDropdown';
 
 export function Navbar() {
   const { user, signOut } = useAuth();
@@ -65,12 +67,7 @@ export function Navbar() {
                   <span>Chat</span>
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" className="gap-2 relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                  3
-                </span>
-              </Button>
+              <NotificationsDropdown />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
@@ -108,14 +105,7 @@ export function Navbar() {
 
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center gap-2">
-          {user && (
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                3
-              </span>
-            </Button>
-          )}
+          {user && <MobileNotificationsDropdown />}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">

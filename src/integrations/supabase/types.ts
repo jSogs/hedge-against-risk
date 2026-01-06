@@ -324,6 +324,135 @@ export type Database = {
           },
         ]
       }
+      news_event_recommendations: {
+        Row: {
+          created_at: string | null
+          id: string
+          news_event_id: string | null
+          recommendation_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          news_event_id?: string | null
+          recommendation_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          news_event_id?: string | null
+          recommendation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_event_recommendations_news_event_id_fkey"
+            columns: ["news_event_id"]
+            isOneToOne: false
+            referencedRelation: "news_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_event_recommendations_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          embedding: string | null
+          id: string
+          importance_score: number | null
+          news_json: Json | null
+          processed_at: string | null
+          published_at: string
+          source: string | null
+          title: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          embedding?: string | null
+          id?: string
+          importance_score?: number | null
+          news_json?: Json | null
+          processed_at?: string | null
+          published_at: string
+          source?: string | null
+          title: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          embedding?: string | null
+          id?: string
+          importance_score?: number | null
+          news_json?: Json | null
+          processed_at?: string | null
+          published_at?: string
+          source?: string | null
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          news_event_id: string | null
+          read_at: string | null
+          recommendation_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          news_event_id?: string | null
+          read_at?: string | null
+          recommendation_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          news_event_id?: string | null
+          read_at?: string | null
+          recommendation_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_news_event_id_fkey"
+            columns: ["news_event_id"]
+            isOneToOne: false
+            referencedRelation: "news_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
