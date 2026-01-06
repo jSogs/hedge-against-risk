@@ -1,5 +1,7 @@
+import { ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { SearchResult } from '@/types/chat';
 
 interface MarketResultCardProps {
@@ -7,6 +9,20 @@ interface MarketResultCardProps {
 }
 
 export function MarketResultCard({ result }: MarketResultCardProps) {
+  // Construct Kalshi URL from series_ticker or external_market_id
+  const getKalshiUrl = () => {
+    if (result.series_ticker) {
+      return `https://kalshi.com/markets/${result.series_ticker.toLowerCase()}`;
+    }
+    // Fallback: use first market's external_market_id
+    if (result.markets.length > 0 && result.markets[0].external_market_id) {
+      return `https://kalshi.com/markets/${result.markets[0].external_market_id.toLowerCase()}`;
+    }
+    return null;
+  };
+
+  const kalshiUrl = getKalshiUrl();
+
   return (
     <Card className="bg-muted/50">
       <CardHeader className="pb-2">
@@ -38,6 +54,19 @@ export function MarketResultCard({ result }: MarketResultCardProps) {
             </div>
           </div>
         ))}
+        {kalshiUrl && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs"
+            asChild
+          >
+            <a href={kalshiUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3 w-3 mr-1.5" />
+              View on Kalshi
+            </a>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -21,6 +21,7 @@ export interface Market {
 export interface SearchResult {
   event_id: string;
   event_title: string;
+  series_ticker?: string;
   similarity: number;
   markets: Market[];
 }
