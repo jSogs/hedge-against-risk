@@ -11,7 +11,7 @@ interface MarketResultCardProps {
 export function MarketResultCard({ result }: MarketResultCardProps) {
   // Construct Kalshi URL from series_ticker (same as recommendations page)
   const kalshiUrl = result.series_ticker
-    ? `https://kalshi.com/markets/${result.series_ticker.toLowerCase()}`
+    ? `https://kalshi.com/markets/${result.series_ticker}`
     : null;
 
   return (

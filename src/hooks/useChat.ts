@@ -6,12 +6,38 @@ import type { Conversation, Message, HedgeAPIResponse } from '@/types/chat';
 // TODO: Connect to your FastAPI backend
 const FASTAPI_BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
+async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
+  const missingEventIds = Array.from(
+    new Set(
+      results
+        .filter((r: any) => r?.event_id && !r?.series_ticker)
+        .map((r: any) => r.event_id as string)
+    )
+  );
+
+  if (missingEventIds.length === 0) return results;
+
+  const { data: events, error } = await supabase
+    .from('kalshi_events')
+    .select('id, series_ticker')
+    .in('id', missingEventIds);
+
+  if (error || !events) return results;
+
+  const tickerMap = new Map(events.map((e) => [e.id, e.series_ticker] as const));
+
+  return results.map((r: any) => ({
+    ...r,
+    series_ticker: r.series_ticker ?? tickerMap.get(r.event_id ?? '') ?? null,
+  }));
+}
+
 async function sendToHedgeAPI(query: string): Promise<HedgeAPIResponse> {
   const data: any = await searchEvents(query);
 
   // Backend returns: { query, results: [...] }
   // But older shapes might be an array or { events: [...] }
-  const results = Array.isArray(data)
+  const rawResults = Array.isArray(data)
     ? data
     : Array.isArray(data?.results)
       ? data.results
@@ -19,23 +45,7 @@ async function sendToHedgeAPI(query: string): Promise<HedgeAPIResponse> {
         ? data.events
         : [];
 
-  // Fetch series_ticker from kalshi_events for each result
-  if (results.length > 0) {
-    const eventIds = results.map((r: any) => r.event_id).filter(Boolean);
-    if (eventIds.length > 0) {
-      const { data: events } = await supabase
-        .from('kalshi_events')
-        .select('id, series_ticker')
-        .in('id', eventIds);
-
-      if (events) {
-        const tickerMap = new Map(events.map(e => [e.id, e.series_ticker]));
-        results.forEach((r: any) => {
-          r.series_ticker = tickerMap.get(r.event_id) || null;
-        });
-      }
-    }
-  }
+  const results = (await enrichResultsWithSeriesTicker(rawResults)) as HedgeAPIResponse['results'];
 
   return { query, results };
 }
@@ -82,14 +92,30 @@ export function useChat(userId: string | undefined) {
         .order('created_at', { ascending: true });
 
       if (!error && data) {
-        setMessages(
-          data.map((msg) => ({
-            id: msg.id,
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            response_data: msg.response_data as unknown as HedgeAPIResponse | null,
-          }))
-        );
+        const mapped: Message[] = data.map((msg) => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          response_data: msg.response_data as unknown as HedgeAPIResponse | null,
+        }));
+
+        // Ensure old conversations also get a Kalshi link (by enriching stored results)
+        const allResults = mapped.flatMap((m) => m.response_data?.results ?? []);
+        const enrichedResults = await enrichResultsWithSeriesTicker(allResults as any[]);
+        const byEventId = new Map(enrichedResults.map((r: any) => [r.event_id, r] as const));
+
+        const enrichedMessages = mapped.map((m) => {
+          if (!m.response_data?.results?.length) return m;
+          return {
+            ...m,
+            response_data: {
+              ...m.response_data,
+              results: m.response_data.results.map((r: any) => byEventId.get(r.event_id) ?? r),
+            },
+          };
+        });
+
+        setMessages(enrichedMessages);
       }
     }
 
