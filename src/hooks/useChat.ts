@@ -19,6 +19,24 @@ async function sendToHedgeAPI(query: string): Promise<HedgeAPIResponse> {
         ? data.events
         : [];
 
+  // Fetch series_ticker from kalshi_events for each result
+  if (results.length > 0) {
+    const eventIds = results.map((r: any) => r.event_id).filter(Boolean);
+    if (eventIds.length > 0) {
+      const { data: events } = await supabase
+        .from('kalshi_events')
+        .select('id, series_ticker')
+        .in('id', eventIds);
+
+      if (events) {
+        const tickerMap = new Map(events.map(e => [e.id, e.series_ticker]));
+        results.forEach((r: any) => {
+          r.series_ticker = tickerMap.get(r.event_id) || null;
+        });
+      }
+    }
+  }
+
   return { query, results };
 }
 
