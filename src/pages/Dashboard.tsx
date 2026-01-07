@@ -192,8 +192,9 @@ export default function Dashboard() {
   if (authLoading || loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Obtaining potential hedging opportunities...</p>
         </div>
       </Layout>
     );
