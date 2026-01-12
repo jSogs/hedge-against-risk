@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SettingsModalProps {
   children?: React.ReactNode;
@@ -21,6 +24,114 @@ interface SettingsModalProps {
 }
 
 type SettingsTab = "account" | "notifications" | "integrations" | "billing";
+
+function AccountTab({ user }: { user: any }) {
+  const [userName, setUserName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('profile_json')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data && data.profile_json) {
+        const pJson = data.profile_json as Record<string, any>;
+        setUserName(pJson.name || '');
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
+  const handleSaveName = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      // Get existing profile_json
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('profile_json')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) throw new Error('Profile not found');
+
+      const profileJson = (profile.profile_json as Record<string, any>) || {};
+      
+      // Update only the name field
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          profile_json: {
+            ...profileJson,
+            name: userName || null
+          }
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Name updated',
+        description: 'Your display name has been saved successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update name',
+        description: error.message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl space-y-8">
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-medium mb-1">Profile Photo</h3>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20 rounded-2xl border-2 border-muted">
+              <AvatarFallback className="text-xl bg-muted/50">
+                {userName ? userName.substring(0, 2).toUpperCase() : user?.email?.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <Button variant="outline" size="sm" className="bg-background shadow-sm">Upload new</Button>
+          </div>
+        </div>
+        
+        <div className="grid gap-2">
+          <Label>Your Name</Label>
+          <div className="flex gap-2">
+            <Input
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Enter your name..."
+              className="border-l-4 border-l-primary/50"
+            />
+            <Button onClick={handleSaveName} disabled={saving} size="sm" className="shrink-0">
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">This is how we'll greet you throughout the app.</p>
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Email Address</Label>
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted/10 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
+            {user?.email}
+          </div>
+          <p className="text-[10px] text-muted-foreground">Contact support to change your email.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsModal({ children, open, onOpenChange }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
@@ -101,31 +212,7 @@ export function SettingsModal({ children, open, onOpenChange }: SettingsModalPro
           
           <div className="flex-1 overflow-y-auto p-8">
             
-            {activeTab === "account" && (
-              <div className="max-w-xl space-y-8">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-1">Profile Photo</h3>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20 rounded-2xl border-2 border-muted">
-                        <AvatarFallback className="text-xl bg-muted/50">
-                          {user?.email?.substring(0,2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button variant="outline" size="sm" className="bg-background shadow-sm">Upload new</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label>Email Address</Label>
-                    <div className="flex h-10 w-full rounded-md border border-input bg-muted/10 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
-                      {user?.email}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">Contact support to change your email.</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {activeTab === "account" && <AccountTab user={user} />}
 
             {activeTab === "notifications" && (
               <div className="max-w-xl space-y-6">

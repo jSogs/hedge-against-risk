@@ -23,6 +23,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(message.reaction || null);
   const [isSaved, setIsSaved] = useState(message.is_saved || false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
+  const thinkingSteps = (message.thinking ?? []).filter(
+    (step): step is { content: string } => !!step && typeof (step as any).content === 'string'
+  );
 
   const handleCopy = useCallback(async () => {
     try {
@@ -134,17 +138,39 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
       ) : (
         <div className="w-full max-w-[48rem] space-y-4">
-          {/* Meta row (ChatGPT-style) */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Thought for a few seconds</span>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </div>
+          {/* Meta row with thinking indicator */}
+          {thinkingSteps.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+              <span>{message.isStreaming ? 'Thinking...' : 'Thought for a few seconds'}</span>
+              <button 
+                onClick={() => setShowThinking(!showThinking)}
+                className="hover:text-foreground transition-colors"
+              >
+                <ChevronDown className={cn(
+                  "h-3.5 w-3.5 transition-transform",
+                  showThinking && "rotate-180"
+                )} />
+              </button>
+            </div>
+          )}
 
-          {/* Assistant content with markdown */}
-          <div className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none prose-p:my-3 prose-headings:my-4 prose-ul:my-3 prose-ol:my-3 prose-li:my-1">
+          {/* Thinking steps (collapsible) - shown directly under the meta row */}
+          {thinkingSteps.length > 0 && showThinking && (
+            <div className="space-y-2 px-4 py-3 bg-muted/30 rounded-xl border border-border/50">
+              <div className="text-xs font-medium text-muted-foreground mb-2">Reasoning:</div>
+              {thinkingSteps.map((step, index) => (
+                <div key={index} className="text-xs text-muted-foreground italic leading-relaxed">
+                  {step.content || ''}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Assistant content with markdown (extra breathing room) */}
+          <div className="text-sm leading-7 text-foreground prose prose-sm max-w-none prose-p:my-4 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-hr:my-6">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.content}
+              {message.content || (message.isStreaming ? '' : 'Thinking...')}
             </ReactMarkdown>
           </div>
 
@@ -157,8 +183,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
             </div>
           )}
 
-          {/* Actions row */}
-          <div className="flex items-center gap-1 pt-2 text-muted-foreground">
+          {/* Actions row - don't show for streaming messages */}
+          {!message.isStreaming && (
+            <div className="flex items-center gap-1 pt-2 text-muted-foreground">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -206,6 +233,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <RotateCcw className={cn("h-4 w-4", isRegenerating && "animate-spin")} />
             </Button>
           </div>
+          )}
         </div>
       )}
     </div>

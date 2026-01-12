@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChatListSidebar } from "@/components/chat/ChatListSidebar";
+import { TrashModal } from "@/components/chat/TrashModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,32 +18,51 @@ import {
   FileText,
   Eye,
   Compass,
+  User,
+  DollarSign,
+  Shield,
+  TrendingUp,
 } from "lucide-react";
 
 function SidebarShell({
   title,
   children,
+  onTrashClick,
+  onClose,
 }: {
   title: string;
   children: React.ReactNode;
+  onTrashClick?: () => void;
+  onClose?: () => void;
 }) {
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="h-12 px-4 flex items-center border-b-2 border-border bg-muted/10 shrink-0">
+      <div className="h-12 px-4 flex items-center justify-between border-b-2 border-border bg-muted/10 shrink-0">
         <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-7 w-7 hover:bg-muted/50"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       <div className="flex-1 min-h-0">{children}</div>
-      <SecondarySidebarFooter />
+      {onTrashClick && <SecondarySidebarFooter onTrashClick={onTrashClick} />}
     </div>
   );
 }
 
-function SecondarySidebarFooter() {
+function SecondarySidebarFooter({ onTrashClick }: { onTrashClick: () => void }) {
   return (
     <div className="border-t-2 border-border bg-muted/10 p-3 shrink-0">
       <Button
         variant="ghost"
         className="w-full justify-start gap-3 h-10 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        onClick={onTrashClick}
       >
         <Trash2 className="h-4 w-4" />
         <span className="text-sm">Trash</span>
@@ -260,12 +281,113 @@ function HomeInfoPanel() {
   );
 }
 
-export function SecondarySidebar() {
+function ProfilePanel() {
+  const navigate = useNavigate();
+  
+  // Smooth scroll to a section
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-1">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-12 rounded-lg items-start py-2 hover:bg-primary/10"
+            onClick={() => scrollToSection('risk-identity')}
+          >
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-sm font-medium">Personal Profile</span>
+              <span className="text-xs text-muted-foreground">Location & context</span>
+            </div>
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-12 rounded-lg items-start py-2 hover:bg-primary/10"
+            onClick={() => scrollToSection('exposure-matrix')}
+          >
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-sm font-medium">Exposure Matrix</span>
+              <span className="text-xs text-muted-foreground">Primary risks & debt</span>
+            </div>
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-12 rounded-lg items-start py-2 hover:bg-primary/10"
+            onClick={() => scrollToSection('hedging-preferences')}
+          >
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-sm font-medium">Hedging Strategy</span>
+              <span className="text-xs text-muted-foreground">Budget & risk appetite</span>
+            </div>
+          </Button>
+        </div>
+
+        <div className="px-3 py-4">
+          <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Why profile matters
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  A complete risk profile helps Probable surface the most relevant hedging opportunities for your unique situation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-3 pb-4 space-y-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            Quick Actions
+          </div>
+          
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 h-9 text-sm"
+            onClick={() => navigate('/dashboard/recommendations')}
+          >
+            <Target className="h-3.5 w-3.5" />
+            View Recommendations
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 h-9 text-sm"
+            onClick={() => navigate('/chat')}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Ask Hedge AI
+          </Button>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+interface SecondarySidebarProps {
+  onClose?: () => void;
+}
+
+export function SecondarySidebar({ onClose }: SecondarySidebarProps) {
   const location = useLocation();
+  const [trashModalOpen, setTrashModalOpen] = useState(false);
 
   if (location.pathname.startsWith("/home")) {
     return (
-      <SidebarShell title="Home">
+      <SidebarShell title="Home" onClose={onClose}>
         <HomeInfoPanel />
       </SidebarShell>
     );
@@ -273,23 +395,38 @@ export function SecondarySidebar() {
 
   if (location.pathname.startsWith("/chat")) {
     return (
-      <SidebarShell title="Chat">
-        <ChatListSidebar />
-      </SidebarShell>
+      <>
+        <SidebarShell 
+          title="Chat" 
+          onTrashClick={() => setTrashModalOpen(true)}
+          onClose={onClose}
+        >
+          <ChatListSidebar />
+        </SidebarShell>
+        <TrashModal open={trashModalOpen} onOpenChange={setTrashModalOpen} />
+      </>
     );
   }
 
   if (location.pathname.startsWith("/dashboard")) {
     return (
-      <SidebarShell title="Dashboard">
+      <SidebarShell title="Dashboard" onClose={onClose}>
         <DashboardPanel />
+      </SidebarShell>
+    );
+  }
+
+  if (location.pathname.startsWith("/profile")) {
+    return (
+      <SidebarShell title="Risk Profile" onClose={onClose}>
+        <ProfilePanel />
       </SidebarShell>
     );
   }
 
   // Default: Home-ish panel
   return (
-    <SidebarShell title="Workspace">
+    <SidebarShell title="Workspace" onClose={onClose}>
       <SimpleNavPanel
         items={[
           { title: "Home", subtitle: "Search & workspace", href: "/home", icon: Home },
