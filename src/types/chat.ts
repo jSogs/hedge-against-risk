@@ -32,6 +32,11 @@ export interface HedgeAPIResponse {
   markets?: SearchResult[];
 }
 
+export interface ThinkingStep {
+  content: string;
+  timestamp: number;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -39,6 +44,8 @@ export interface Message {
   response_data?: HedgeAPIResponse | null;
   reaction?: 'like' | 'dislike' | null;
   is_saved?: boolean;
+  thinking?: ThinkingStep[];
+  isStreaming?: boolean;
 }
 
 export interface Conversation {

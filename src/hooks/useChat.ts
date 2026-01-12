@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { sendChatMessage, deleteChatConversation } from "@/lib/api";   
+import { sendChatMessage, sendChatMessageStream, deleteChatConversation } from "@/lib/api";   
 import { supabase } from '@/integrations/supabase/client';
-import type { Conversation, Message, HedgeAPIResponse } from '@/types/chat';
+import type { Conversation, Message, HedgeAPIResponse, ThinkingStep } from '@/types/chat';
 
 async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
   const missingEventIds = Array.from(
@@ -30,7 +30,9 @@ async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
 }
 
 export function useChat(userId: string | undefined) {
+  const debugStream = import.meta.env.DEV;
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [deletedConversations, setDeletedConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
     // Restore active conversation from localStorage on mount
     if (typeof window !== 'undefined') {
@@ -41,6 +43,7 @@ export function useChat(userId: string | undefined) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [isStreamingRef] = useState<{ current: boolean }>({ current: false });
 
   // Persist active conversation to localStorage
   useEffect(() => {
@@ -80,10 +83,42 @@ export function useChat(userId: string | undefined) {
     loadConversations();
   }, [userId]);
 
+  // Load deleted conversations (for trash view)
+  useEffect(() => {
+    if (!userId) return;
+
+    async function loadDeletedConversations() {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_deleted', true)
+        .order('deleted_at', { ascending: false });
+
+      if (!error && data) {
+        setDeletedConversations(data);
+      }
+    }
+
+    loadDeletedConversations();
+  }, [userId]);
+
   // Load messages when active conversation changes
   useEffect(() => {
-    if (!activeConversationId || !userId) {
+    // NOTE: When creating a brand-new chat, `activeConversationId` is temporarily null
+    // until the streaming endpoint emits `conversation_id`. We should NOT clear messages
+    // in that window, otherwise we wipe the optimistic user + streaming assistant messages.
+    if (!userId) {
       setMessages([]);
+      return;
+    }
+    if (!activeConversationId) {
+      return;
+    }
+    
+    // CRITICAL: Don't reload messages from DB while actively streaming,
+    // otherwise we'll overwrite the optimistic/streaming messages!
+    if (isStreamingRef.current) {
       return;
     }
 
@@ -192,6 +227,7 @@ export function useChat(userId: string | undefined) {
       let conversationId = activeConversationId;
 
       setLoading(true);
+      isStreamingRef.current = true; // Mark as streaming to prevent DB reload
 
       // Add user message optimistically (for immediate UI feedback)
       const tempUserMessage: Message = {
@@ -202,97 +238,174 @@ export function useChat(userId: string | undefined) {
       setMessages((prev) => [...prev, tempUserMessage]);
 
       try {
-        // Call new backend API - it handles saving both user and assistant messages
-        const apiResponse = await sendChatMessage({
-          conversation_id: conversationId || undefined,
-          message: content,
-          user_id: userId,
-        });
+        // Create a streaming assistant message
+        const streamingMessageId = `streaming-${Date.now()}`;
+        const streamingMessage: Message = {
+          id: streamingMessageId,
+          role: 'assistant',
+          content: '',
+          thinking: [],
+          isStreaming: true,
+        };
+        setMessages((prev) => [...prev, streamingMessage]);
 
-        // Update conversation ID if this was a new conversation
-        const newConversationId = apiResponse.conversation_id;
-        if (!conversationId) {
-          conversationId = newConversationId;
-          setActiveConversationId(newConversationId);
-          
-          // Reload conversations list to include the new one
-          const { data: newConv } = await supabase
-            .from('conversations')
-            .select('*')
-            .eq('id', newConversationId)
-            .single();
-          
-          if (newConv) {
-            setConversations((prev) => [newConv, ...prev]);
-          }
-        }
+        let newConversationId = conversationId || '';
+        let currentThinkingStep: ThinkingStep | null = null;
+        let outputContent = '';
 
-        // Fetch the latest messages from the conversation to get both user and assistant messages
-        // with proper IDs from the database
-        const { data: latestMessages, error } = await supabase
-          .from('chat_messages')
-          .select('*')
-          .eq('conversation_id', newConversationId)
-          .order('created_at', { ascending: true });
-
-        if (!error && latestMessages) {
-          // Map to Message type and enrich with series tickers
-          const mapped: Message[] = latestMessages.map((msg) => ({
-            id: msg.id,
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            response_data: msg.response_data as unknown as HedgeAPIResponse | null,
-          }));
-
-          // Enrich market results with series_ticker
-          const allResults = mapped.flatMap((m) => {
-            const markets = m.response_data?.markets || m.response_data?.results || [];
-            return markets;
-          });
-          
-          if (allResults.length > 0) {
-            const enrichedResults = await enrichResultsWithSeriesTicker(allResults as any[]);
-            const byEventId = new Map(enrichedResults.map((r: any) => [r.event_id, r] as const));
-
-            const enrichedMessages = mapped.map((m) => {
-              const markets = m.response_data?.markets || m.response_data?.results;
-              if (!markets?.length) return m;
+        // Stream the response
+        await sendChatMessageStream(
+          {
+            conversation_id: conversationId || undefined,
+            message: content,
+            user_id: userId,
+          },
+          (event) => {
+            // Log all events to console for debugging
+            if (debugStream) console.log('[Stream Event]', event);
+            
+            if (event.type === 'conversation_id') {
+              newConversationId = event.data || '';
               
-              const enrichedMarkets = markets.map((r: any) => byEventId.get(r.event_id) ?? r);
-              
-              return {
-                ...m,
-                response_data: {
-                  ...m.response_data,
-                  markets: enrichedMarkets,
-                  results: enrichedMarkets,
-                },
+              // Update conversation ID if this was a new conversation
+              if (!conversationId) {
+                conversationId = newConversationId;
+                setActiveConversationId(newConversationId);
+                
+                // Reload conversations list to include the new one
+                supabase
+                  .from('conversations')
+                  .select('*')
+                  .eq('id', newConversationId)
+                  .single()
+                  .then(({ data: newConv }) => {
+                    if (newConv) {
+                      setConversations((prev) => [newConv, ...prev]);
+                    }
+                  });
+              }
+            } else if (event.type === 'thinking_start') {
+              // Start a new thinking step
+              if (debugStream) console.log('[Thinking] Started new thinking step');
+              currentThinkingStep = {
+                content: '',
+                timestamp: Date.now(),
               };
-            });
+              
+              // Add the thinking step to the array
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === streamingMessageId
+                    ? { ...m, thinking: [...(m.thinking || []), currentThinkingStep!] }
+                    : m
+                )
+              );
+            } else if (event.type === 'thinking') {
+              // Add to current thinking step
+              if (currentThinkingStep && event.content) {
+                currentThinkingStep.content += event.content;
+                if (debugStream) console.log('[Thinking] Content:', currentThinkingStep.content.substring(0, 50) + '...');
+                
+                // Update the message with the current thinking
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamingMessageId
+                      ? {
+                          ...m,
+                          thinking: [
+                            ...(m.thinking || []).slice(0, -1),
+                            currentThinkingStep!,
+                          ],
+                        }
+                      : m
+                  )
+                );
+              }
+            } else if (event.type === 'thinking_end') {
+              // Finalize the thinking step
+              if (debugStream) console.log('[Thinking] Ended thinking step');
+              currentThinkingStep = null;
+            } else if (event.type === 'output') {
+              // Add to output content
+              if (event.content) {
+                outputContent += event.content;
+                if (debugStream) console.log('[Output] Content:', outputContent.substring(0, 50) + '...');
+                
+                // Update the message with the current output
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamingMessageId
+                      ? { ...m, content: outputContent }
+                      : m
+                  )
+                );
+              }
+            } else if (event.type === 'markets') {
+              // Attach markets to the streaming message so the UI can render cards
+              if (debugStream) console.log('[Markets] Received markets event with', event.results?.length || 0, 'results');
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === streamingMessageId
+                    ? {
+                        ...m,
+                        response_data: {
+                          query: event.query,
+                          results: event.results,
+                        },
+                      }
+                    : m
+                )
+              );
+            } else if (event.type === 'done') {
+              const finalMessageId = event.message_id || '';
+              
+              // Mark streaming as complete
+              isStreamingRef.current = false;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === streamingMessageId
+                    ? { ...m, id: finalMessageId, isStreaming: false }
+                    : m
+                )
+              );
 
-            setMessages(enrichedMessages);
-          } else {
-            setMessages(mapped);
+              // Update conversation title in the list
+              supabase
+                .from('conversations')
+                .select('*')
+                .eq('id', newConversationId)
+                .single()
+                .then(({ data: updatedConv }) => {
+                  if (updatedConv) {
+                    setConversations((prev) =>
+                      prev.map((c) => (c.id === newConversationId ? updatedConv : c))
+                    );
+                  }
+                });
+            } else if (event.type === 'error') {
+              console.error('Stream error:', event.message);
+              isStreamingRef.current = false;
+              
+              // Remove streaming message and show error
+              setMessages((prev) =>
+                prev.filter((m) => m.id !== streamingMessageId)
+              );
+              
+              const errorMessage: Message = {
+                id: `error-${Date.now()}`,
+                role: 'assistant',
+                content: `Sorry, there was an error: ${event.message}. Please try again.`,
+              };
+              setMessages((prev) => [...prev, errorMessage]);
+            }
           }
-        }
-
-        // Update conversation title in the list
-        const { data: updatedConv } = await supabase
-          .from('conversations')
-          .select('*')
-          .eq('id', newConversationId)
-          .single();
-
-        if (updatedConv) {
-          setConversations((prev) =>
-            prev.map((c) => (c.id === newConversationId ? updatedConv : c))
-          );
-        }
+        );
       } catch (error) {
         console.error('Error calling chat API:', error);
+        isStreamingRef.current = false;
         
-        // Remove the optimistic user message and show error
-        setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id));
+        // Remove the optimistic user message and streaming message
+        setMessages((prev) => prev.filter((m) => !m.id.startsWith('temp-') && !m.id.startsWith('streaming-')));
         
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
@@ -302,6 +415,7 @@ export function useChat(userId: string | undefined) {
         setMessages((prev) => [...prev, errorMessage]);
       }
 
+      isStreamingRef.current = false;
       setLoading(false);
     },
     [userId, loading, activeConversationId, conversations]
@@ -311,17 +425,24 @@ export function useChat(userId: string | undefined) {
     if (!userId) return;
     
     try {
+      const now = new Date().toISOString();
       // Soft delete: mark as deleted instead of hard delete
       await supabase
         .from('conversations')
         .update({
           is_deleted: true,
-          deleted_at: new Date().toISOString()
+          deleted_at: now
         })
         .eq('id', id)
         .eq('user_id', userId);
 
-      setConversations((prev) => prev.filter((c) => c.id !== id));
+      // Move from active to deleted conversations
+      const deleted = conversations.find(c => c.id === id);
+      if (deleted) {
+        setConversations((prev) => prev.filter((c) => c.id !== id));
+        setDeletedConversations((prev) => [{ ...deleted, is_deleted: true, deleted_at: now }, ...prev]);
+      }
+      
       if (activeConversationId === id) {
         setActiveConversationId(null);
         setMessages([]);
@@ -329,15 +450,57 @@ export function useChat(userId: string | undefined) {
     } catch (error) {
       console.error('Error deleting conversation:', error);
     }
-  }, [activeConversationId, userId]);
+  }, [activeConversationId, userId, conversations]);
 
   const startNewChat = useCallback(() => {
     setActiveConversationId(null);
     setMessages([]);
   }, []);
 
+  const restoreConversation = useCallback(async (id: string) => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({ is_deleted: false, deleted_at: null })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Move from deleted to active conversations
+      const restored = deletedConversations.find(c => c.id === id);
+      if (restored) {
+        setDeletedConversations(prev => prev.filter(c => c.id !== id));
+        setConversations(prev => [{ ...restored, is_deleted: false, deleted_at: null }, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error restoring conversation:', error);
+    }
+  }, [userId, deletedConversations]);
+
+  const permanentlyDeleteConversation = useCallback(async (id: string) => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setDeletedConversations(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error permanently deleting conversation:', error);
+    }
+  }, [userId]);
+
   return {
     conversations,
+    deletedConversations,
     activeConversationId,
     messages,
     loading,
@@ -345,6 +508,8 @@ export function useChat(userId: string | undefined) {
     setActiveConversationId,
     sendMessage,
     deleteConversation,
+    restoreConversation,
+    permanentlyDeleteConversation,
     startNewChat,
   };
 }

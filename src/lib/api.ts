@@ -45,6 +45,71 @@ export async function sendChatMessage(payload: ChatMessagePayload): Promise<Chat
   return res.json();
 }
 
+export interface StreamEvent {
+  type: 'conversation_id' | 'thinking_start' | 'thinking' | 'thinking_end' | 'output' | 'markets' | 'done' | 'error';
+  content?: string;
+  data?: string;
+  message_id?: string;
+  message?: string;
+  query?: string;
+  results?: any[];
+}
+
+export type StreamCallback = (event: StreamEvent) => void;
+
+export async function sendChatMessageStream(
+  payload: ChatMessagePayload,
+  onEvent: StreamCallback
+): Promise<void> {
+  const res = await fetch(`${API_URL}/v1/chat/message/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Chat stream failed (${res.status}): ${text}`);
+  }
+
+  const reader = res.body?.getReader();
+  const decoder = new TextDecoder();
+
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  try {
+    let buffer = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      
+      // Process complete SSE messages
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          try {
+            const event = JSON.parse(data) as StreamEvent;
+            onEvent(event);
+          } catch (e) {
+            console.error('Failed to parse SSE data:', data, e);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function deleteChatConversation(conversationId: string, userId: string): Promise<void> {
   const res = await fetch(`${API_URL}/v1/chat/${conversationId}?user_id=${userId}`, {
     method: "DELETE",
