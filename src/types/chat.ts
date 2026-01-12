@@ -37,6 +37,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   response_data?: HedgeAPIResponse | null;
+  reaction?: 'like' | 'dislike' | null;
+  is_saved?: boolean;
 }
 
 export interface Conversation {
@@ -45,4 +47,6 @@ export interface Conversation {
   title: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_deleted?: boolean;
 }
