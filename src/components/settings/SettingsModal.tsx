@@ -25,7 +25,11 @@ interface SettingsModalProps {
 
 type SettingsTab = "account" | "notifications" | "integrations" | "billing";
 
-function AccountTab({ user }: { user: any }) {
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
+// ...
+
+function AccountTab({ user }: { user: SupabaseUser | null }) {
   const [userName, setUserName] = useState("");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -40,8 +44,8 @@ function AccountTab({ user }: { user: any }) {
         .single();
       
       if (data && data.profile_json) {
-        const pJson = data.profile_json as Record<string, any>;
-        setUserName(pJson.name || '');
+        const pJson = data.profile_json as Record<string, unknown>;
+        setUserName((pJson.name as string) || '');
       }
     };
     fetchProfile();
@@ -51,7 +55,6 @@ function AccountTab({ user }: { user: any }) {
     if (!user) return;
     setSaving(true);
     try {
-      // Get existing profile_json
       const { data: profile } = await supabase
         .from('profiles')
         .select('profile_json')
@@ -60,7 +63,8 @@ function AccountTab({ user }: { user: any }) {
 
       if (!profile) throw new Error('Profile not found');
 
-      const profileJson = (profile.profile_json as Record<string, any>) || {};
+      // Use a known type or unknown instead of any
+      const profileJson = (profile.profile_json as Record<string, unknown>) || {};
       
       // Update only the name field
       const { error } = await supabase
@@ -80,10 +84,11 @@ function AccountTab({ user }: { user: any }) {
         description: 'Your display name has been saved successfully.',
       });
     } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update name';
       toast({
         variant: 'destructive',
         title: 'Failed to update name',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setSaving(false);

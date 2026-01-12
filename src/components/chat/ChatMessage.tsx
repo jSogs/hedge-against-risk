@@ -25,7 +25,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
   const thinkingSteps = (message.thinking ?? []).filter(
-    (step): step is { content: string } => !!step && typeof (step as any).content === 'string'
+    (step): step is { content: string } => !!step && typeof step.content === 'string'
   );
 
   const handleCopy = useCallback(async () => {

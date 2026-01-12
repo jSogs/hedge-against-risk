@@ -16,6 +16,7 @@ export interface Market {
   market_title: string;
   external_market_id: string;
   outcomes: MarketOutcome[];
+  platform?: string;
 }
 
 export interface SearchResult {

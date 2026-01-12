@@ -47,7 +47,8 @@ export default function Auth() {
       const { error } = await signIn(email, password);
       if (error) throw error;
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -90,7 +91,8 @@ export default function Auth() {
         setSuccess(true);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sendChatMessage, sendChatMessageStream, deleteChatConversation } from "@/lib/api";   
 import { supabase } from '@/integrations/supabase/client';
-import type { Conversation, Message, HedgeAPIResponse, ThinkingStep } from '@/types/chat';
+import type { Conversation, Message, HedgeAPIResponse, ThinkingStep, SearchResult } from '@/types/chat';
 
-async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
+async function enrichResultsWithSeriesTicker(results: SearchResult[]): Promise<SearchResult[]> {
   const missingEventIds = Array.from(
     new Set(
       results
-        .filter((r: any) => r?.event_id && !r?.series_ticker)
-        .map((r: any) => r.event_id as string)
+        .filter((r) => r?.event_id && !r?.series_ticker)
+        .map((r) => r.event_id)
     )
   );
 
@@ -23,9 +23,9 @@ async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
 
   const tickerMap = new Map(events.map((e) => [e.id, e.series_ticker] as const));
 
-  return results.map((r: any) => ({
+  return results.map((r) => ({
     ...r,
-    series_ticker: r.series_ticker ?? tickerMap.get(r.event_id ?? '') ?? null,
+    series_ticker: r.series_ticker ?? tickerMap.get(r.event_id) ?? undefined,
   }));
 }
 
@@ -168,14 +168,14 @@ export function useChat(userId: string | undefined) {
         });
         
         if (allResults.length > 0) {
-          const enrichedResults = await enrichResultsWithSeriesTicker(allResults as any[]);
-          const byEventId = new Map(enrichedResults.map((r: any) => [r.event_id, r] as const));
+          const enrichedResults = await enrichResultsWithSeriesTicker(allResults as SearchResult[]);
+          const byEventId = new Map(enrichedResults.map((r) => [r.event_id, r] as const));
 
           const enrichedMessages = mapped.map((m) => {
             const markets = m.response_data?.markets || m.response_data?.results;
             if (!markets?.length) return m;
             
-            const enrichedMarkets = markets.map((r: any) => byEventId.get(r.event_id) ?? r);
+            const enrichedMarkets = markets.map((r) => byEventId.get(r.event_id) ?? r);
             
             return {
               ...m,

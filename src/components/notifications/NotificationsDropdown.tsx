@@ -32,24 +32,24 @@ export function NotificationsDropdown({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const [notifs, count] = await Promise.all([
-        getNotifications(user.id, false, 20),
-        getUnreadCount(user.id),
-      ]);
-      setNotifications(notifs);
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const [notifs, count] = await Promise.all([
+          getNotifications(user.id, false, 20),
+          getUnreadCount(user.id),
+        ]);
+        setNotifications(notifs);
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (user) {
       fetchNotifications();
       // Poll for new notifications every 30 seconds

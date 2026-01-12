@@ -1,3 +1,5 @@
+import type { SearchResult } from '@/types/chat';
+
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 export async function searchEvents(query: string) {
@@ -27,7 +29,7 @@ export interface ChatMessageResponse {
   conversation_id: string;
   message_id: string;
   response: string;
-  markets?: any[] | null;
+  markets?: SearchResult[] | null;
 }
 
 export async function sendChatMessage(payload: ChatMessagePayload): Promise<ChatMessageResponse> {
@@ -52,7 +54,7 @@ export interface StreamEvent {
   message_id?: string;
   message?: string;
   query?: string;
-  results?: any[];
+  results?: SearchResult[];
 }
 
 export type StreamCallback = (event: StreamEvent) => void;
