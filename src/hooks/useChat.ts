@@ -31,10 +31,25 @@ async function enrichResultsWithSeriesTicker(results: any[]): Promise<any[]> {
 
 export function useChat(userId: string | undefined) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    // Restore active conversation from localStorage on mount
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeConversationId');
+    }
+    return null;
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [conversationsLoading, setConversationsLoading] = useState(true);
+
+  // Persist active conversation to localStorage
+  useEffect(() => {
+    if (activeConversationId) {
+      localStorage.setItem('activeConversationId', activeConversationId);
+    } else {
+      localStorage.removeItem('activeConversationId');
+    }
+  }, [activeConversationId]);
 
   // Load conversations
   useEffect(() => {
@@ -45,10 +60,19 @@ export function useChat(userId: string | undefined) {
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('updated_at', { ascending: false });
 
       if (!error && data) {
         setConversations(data);
+        
+        // Validate that the stored activeConversationId still exists
+        const storedId = localStorage.getItem('activeConversationId');
+        if (storedId && !data.find(c => c.id === storedId)) {
+          // Conversation was deleted, clear it
+          localStorage.removeItem('activeConversationId');
+          setActiveConversationId(null);
+        }
       }
       setConversationsLoading(false);
     }
@@ -58,7 +82,7 @@ export function useChat(userId: string | undefined) {
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (!activeConversationId) {
+    if (!activeConversationId || !userId) {
       setMessages([]);
       return;
     }
@@ -71,11 +95,34 @@ export function useChat(userId: string | undefined) {
         .order('created_at', { ascending: true });
 
       if (!error && data) {
+        // Load reactions and saved status for all messages
+        const messageIds = data.map(m => m.id);
+        
+        const [reactionsData, savedData] = await Promise.all([
+          supabase
+            .from('message_reactions')
+            .select('message_id, reaction_type')
+            .in('message_id', messageIds)
+            .eq('user_id', userId),
+          supabase
+            .from('saved_messages')
+            .select('message_id')
+            .in('message_id', messageIds)
+            .eq('user_id', userId)
+        ]);
+
+        const reactionsMap = new Map(
+          reactionsData.data?.map(r => [r.message_id, r.reaction_type]) || []
+        );
+        const savedSet = new Set(savedData.data?.map(s => s.message_id) || []);
+
         const mapped: Message[] = data.map((msg) => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
           response_data: msg.response_data as unknown as HedgeAPIResponse | null,
+          reaction: reactionsMap.get(msg.id) as 'like' | 'dislike' | null,
+          is_saved: savedSet.has(msg.id),
         }));
 
         // Ensure old conversations also get a Kalshi link (by enriching stored results)
@@ -113,15 +160,14 @@ export function useChat(userId: string | undefined) {
     }
 
     loadMessages();
-  }, [activeConversationId]);
+  }, [activeConversationId, userId]);
 
   const createConversation = useCallback(
     async (initialMessage?: string) => {
       if (!userId) return null;
 
-      const title = initialMessage
-        ? initialMessage.slice(0, 50) + (initialMessage.length > 50 ? '...' : '')
-        : 'New Chat';
+      // Start with a temporary title - the backend will update it with AI-generated title
+      const title = 'New Chat';
 
       const { data, error } = await supabase
         .from('conversations')
@@ -265,7 +311,16 @@ export function useChat(userId: string | undefined) {
     if (!userId) return;
     
     try {
-      await deleteChatConversation(id, userId);
+      // Soft delete: mark as deleted instead of hard delete
+      await supabase
+        .from('conversations')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', userId);
+
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeConversationId === id) {
         setActiveConversationId(null);

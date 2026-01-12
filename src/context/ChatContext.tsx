@@ -1,10 +1,10 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { useChatLogic } from '@/hooks/useChatLogic';
+import { useChat } from '@/hooks/useChat';
 
-const ChatContext = createContext<ReturnType<typeof useChatLogic> | null>(null);
+const ChatContext = createContext<ReturnType<typeof useChat> | null>(null);
 
 export function ChatProvider({ children, userId }: { children: ReactNode; userId: string | undefined }) {
-  const chatData = useChatLogic(userId);
+  const chatData = useChat(userId);
 
   return (
     <ChatContext.Provider value={chatData}>
