@@ -1,4 +1,6 @@
 import { ExternalLink } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,17 +11,27 @@ interface MarketResultCardProps {
 }
 
 export function MarketResultCard({ result }: MarketResultCardProps) {
-  // Construct Kalshi URL from series_ticker (same as recommendations page)
-  const kalshiUrl = result.series_ticker
-    ? `https://kalshi.com/markets/${result.series_ticker}`
-    : null;
+  // Construct market URL - supports both Kalshi and Polymarket
+  const firstMarket = result.markets[0];
+  const platform = firstMarket?.platform || 'kalshi';
+  
+  let marketUrl = null;
+  if (platform === 'polymarket' && result.series_ticker) {
+    marketUrl = `https://polymarket.com/event/${result.series_ticker}`;
+  } else if (result.series_ticker) {
+    marketUrl = `https://kalshi.com/markets/${result.series_ticker}`;
+  }
+  
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
 
   return (
     <Card className="bg-muted/50">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-medium">{result.event_title}</CardTitle>
-          <Badge variant="secondary" className="text-xs">
+          <CardTitle className="text-sm font-medium prose prose-sm max-w-none prose-p:inline prose-p:m-0 prose-strong:font-semibold">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.event_title}</ReactMarkdown>
+          </CardTitle>
+          <Badge variant="secondary" className="text-xs shrink-0">
             {(result.similarity * 100).toFixed(0)}% match
           </Badge>
         </div>
@@ -27,7 +39,9 @@ export function MarketResultCard({ result }: MarketResultCardProps) {
       <CardContent className="space-y-3">
         {result.markets.map((market) => (
           <div key={market.market_id} className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">{market.market_title}</p>
+            <div className="text-xs font-medium text-muted-foreground prose prose-sm max-w-none prose-p:inline prose-p:m-0 prose-strong:font-semibold">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{market.market_title}</ReactMarkdown>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {market.outcomes.map((outcome) => (
                 <div
@@ -46,16 +60,16 @@ export function MarketResultCard({ result }: MarketResultCardProps) {
           </div>
         ))}
 
-        {kalshiUrl && (
+        {marketUrl && (
           <Button
             variant="outline"
             size="sm"
             className="w-full text-xs"
             asChild
           >
-            <a href={kalshiUrl} target="_blank" rel="noopener noreferrer">
+            <a href={marketUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3 w-3 mr-1.5" />
-              View on Kalshi
+              View on {platformLabel}
             </a>
           </Button>
         )}

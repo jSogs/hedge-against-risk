@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, MessageSquare, MoreHorizontal, Search, Trash2, X } from "lucide-react";
-import { useChat } from "@/hooks/useChat";
+import { useChatContext } from "@/context/ChatContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ChatListSidebar() {
-  const { conversations, activeConversationId, setActiveConversationId, startNewChat, deleteConversation } = useChat();
+  const { conversations, activeConversationId, setActiveConversationId, startNewChat, deleteConversation } = useChatContext();
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
 

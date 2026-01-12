@@ -31,38 +31,39 @@ export function RiskIdentity({
   setLocation,
 }: RiskIdentityProps) {
   return (
-    <Card className="glass border-l-4 border-l-primary/50">
+    <Card className="bg-card border-border shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Building2 className="h-5 w-5" />
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>{isBusiness ? "Business Identity" : "Personal Identity"}</CardTitle>
-            <CardDescription>
-              {isBusiness ? "Core business details that define your risk environment." : "Your location and context."}
+            <CardTitle className="text-lg">{isBusiness ? "Business Profile" : "Personal Profile"}</CardTitle>
+            <CardDescription className="text-sm">
+              {isBusiness ? "Basic details about your business" : "Your location and context"}
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-6">
+      <CardContent className="space-y-6">
         {isBusiness && (
-          <div className="grid gap-2">
-            <Label>Company Name</Label>
+          <div className="space-y-2">
+            <Label htmlFor="company-name" className="text-sm font-medium">Company Name</Label>
             <Input
+              id="company-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Acme Logistics"
-              className="bg-background/50"
+              className="h-11"
             />
           </div>
         )}
 
-        <div className="grid gap-2">
-          <Label>Location</Label>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Location</Label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <div className="[&>button]:pl-9">
+            <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+            <div className="[&>button]:pl-9 [&>button]:h-11">
               <LocationCombobox
                 value={location}
                 onChange={setLocation}
@@ -73,27 +74,25 @@ export function RiskIdentity({
         </div>
 
         {isBusiness && (
-          <div className="grid gap-2">
-            <Label>Industry</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Industry</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {industries.map((ind) => {
                 const Icon = ind.icon;
+                const isSelected = industry === ind.id;
                 return (
                   <button
                     key={ind.id}
                     onClick={() => setIndustry(ind.id)}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all hover:bg-accent/50",
-                      industry === ind.id 
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/20" 
-                        : "border-border bg-background/50"
+                      "flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors",
+                      isSelected
+                        ? "border-primary/50 bg-primary/10 text-primary" 
+                        : "border-border hover:bg-muted/50 text-muted-foreground"
                     )}
                   >
-                    <Icon className={cn(
-                      "h-5 w-5",
-                      industry === ind.id ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    <span className="text-xs font-medium text-center">{ind.label}</span>
+                    <Icon className="h-5 w-5" />
+                    <span className="text-xs font-medium">{ind.label}</span>
                   </button>
                 );
               })}
@@ -101,17 +100,18 @@ export function RiskIdentity({
           </div>
         )}
 
-        <div className="grid gap-2">
-          <Label>Risk Context</Label>
-          <div className="relative">
-            <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={isBusiness ? "Briefly describe your business operations..." : "Briefly describe your situation..."}
-              className="min-h-[100px] pl-9 bg-background/50 resize-none"
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-sm font-medium">
+            {isBusiness ? "Business Description (Optional)" : "Additional Context (Optional)"}
+          </Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={isBusiness ? "Describe your operations, revenue model, or key activities..." : "Any relevant details about your financial situation..."}
+            className="min-h-[100px] resize-none"
+            rows={4}
+          />
         </div>
       </CardContent>
     </Card>

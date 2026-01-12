@@ -21,21 +21,25 @@ export function ExposureMatrix({
   const items = isBusiness ? costExposures : budgetImpacts;
 
   return (
-    <Card className="glass border-l-4 border-l-primary/50">
+    <Card className="bg-card border-border shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <ShieldAlert className="h-5 w-5" />
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ShieldAlert className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Exposure Matrix</CardTitle>
-            <CardDescription>Select the factors that most threaten your financial stability.</CardDescription>
+            <CardTitle className="text-lg">Risk Exposures</CardTitle>
+            <CardDescription className="text-sm">
+              Select the factors that could impact your financial stability
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Primary Exposures</h4>
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            What are you most exposed to?
+          </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {items.map((item) => {
               const Icon = item.icon;
@@ -45,22 +49,22 @@ export function ExposureMatrix({
                   key={item.id}
                   onClick={() => toggleExposure(item.id)}
                   className={cn(
-                    "relative flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:shadow-md text-left group",
+                    "relative flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left",
                     isSelected 
                       ? "border-primary/50 bg-primary/5" 
-                      : "border-border bg-background/50 hover:bg-accent/50"
+                      : "border-border hover:bg-muted/50"
                   )}
                 >
                   <div className={cn(
-                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                    "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
                     isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
-                    {isSelected ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                    {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                   </div>
-                  <div className="space-y-1">
+                  <div className="flex-1 min-w-0">
                     <span className="font-medium text-sm block">{item.label}</span>
-                    <span className="text-xs text-muted-foreground leading-snug">
-                      {isBusiness ? (item as any).description : "Impacts monthly budget stability."}
+                    <span className="text-xs text-muted-foreground leading-tight line-clamp-2">
+                      {isBusiness ? (item as any).description : "Impacts monthly budget stability"}
                     </span>
                   </div>
                 </button>
@@ -70,9 +74,11 @@ export function ExposureMatrix({
         </div>
 
         {!isBusiness && (
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Debt & Liabilities</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="space-y-3 pt-3 border-t border-border/50">
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Outstanding debts or liabilities
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {debtExposures.map((debt) => {
                 const Icon = debt.icon;
                 const isSelected = selectedDebt.includes(debt.id);
@@ -81,16 +87,13 @@ export function ExposureMatrix({
                     key={debt.id}
                     onClick={() => toggleDebt(debt.id)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl border transition-all hover:bg-accent/50",
+                      "flex flex-col items-center justify-center p-3 rounded-lg border transition-colors",
                       isSelected
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                        : "border-border bg-background/50"
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border hover:bg-muted/50 text-muted-foreground"
                     )}
                   >
-                    <Icon className={cn(
-                      "h-6 w-6 mb-2 transition-colors",
-                      isSelected ? "text-primary" : "text-muted-foreground"
-                    )} />
+                    <Icon className="h-5 w-5 mb-1.5" />
                     <span className="text-xs font-medium text-center">{debt.label}</span>
                   </button>
                 );

@@ -33,28 +33,30 @@ export function HedgingPreferences({
   setRiskStyle,
 }: HedgingPreferencesProps) {
   return (
-    <Card className="glass border-l-4 border-l-blue-500/50">
+    <Card className="bg-card border-border shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-            <Sliders className="h-5 w-5" />
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Sliders className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Strategy Preferences</CardTitle>
-            <CardDescription>Configure how Hedge AI constructs your protection strategy.</CardDescription>
+            <CardTitle className="text-lg">Hedging Strategy</CardTitle>
+            <CardDescription className="text-sm">
+              Configure how Probable recommends protection strategies
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
+      <CardContent className="space-y-6">
         
         {/* Planning Horizon */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
               Planning Horizon
             </Label>
-            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+            <span className="text-xs font-medium text-primary">
               {planningWindows.find(w => w.id === planningWindow)?.label}
             </span>
           </div>
@@ -64,10 +66,10 @@ export function HedgingPreferences({
                 key={window.id}
                 onClick={() => setPlanningWindow(window.id)}
                 className={cn(
-                  "h-10 rounded-lg text-xs font-medium transition-all border",
+                  "h-10 rounded-lg text-xs font-medium transition-colors border",
                   planningWindow === window.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-background/50 border-border hover:bg-accent"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border hover:bg-muted/50"
                 )}
               >
                 {window.label}
@@ -77,10 +79,10 @@ export function HedgingPreferences({
         </div>
 
         {/* Exposure Slider */}
-        <div className="space-y-4">
-          <Label className="flex items-center justify-between">
-            <span>Est. Monthly Exposure</span>
-            <span className="text-primary font-bold">
+        <div className="space-y-3">
+          <Label className="text-sm font-medium flex items-center justify-between">
+            <span>Estimated Monthly Exposure</span>
+            <span className="text-primary font-semibold">
               {exposureRanges[exposureRange[0]]?.label}
             </span>
           </Label>
@@ -92,7 +94,7 @@ export function HedgingPreferences({
               step={1}
               className="py-4"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wider mt-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
               <span>Low</span>
               <span>Medium</span>
               <span>High</span>
@@ -102,46 +104,60 @@ export function HedgingPreferences({
         </div>
 
         {/* Budget Input */}
-        <div className="space-y-4">
-          <Label className="flex items-center gap-2">
+        <div className="space-y-2">
+          <Label htmlFor="hedge-budget" className="text-sm font-medium flex items-center gap-2">
             <Wallet className="h-4 w-4 text-muted-foreground" />
             Monthly Hedge Budget
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
             <Input
+              id="hedge-budget"
               type="number"
               value={hedgeBudget}
               onChange={(e) => setHedgeBudget(e.target.value)}
-              className="pl-8 font-mono text-lg bg-background/50"
+              className="pl-8 h-11 font-mono text-base"
+              min="0"
+              step="100"
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Maximum amount you're willing to spend on hedging per month
+          </p>
         </div>
 
         {/* Risk Style Grid */}
-        <div className="space-y-4">
-          <Label>Risk Appetite</Label>
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Risk Appetite</Label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {riskStyles.map((style) => (
-              <button
-                key={style.id}
-                onClick={() => setRiskStyle(style.id as RiskStyle)}
-                className={cn(
-                  "p-4 rounded-xl border text-left transition-all hover:bg-accent/50",
-                  riskStyle === style.id
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                    : "border-border bg-background/50"
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold capitalize">{style.label}</span>
-                  {riskStyle === style.id && <div className="h-2 w-2 rounded-full bg-primary" />}
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-tight">
-                  {style.description}
-                </p>
-              </button>
-            ))}
+            {riskStyles.map((style) => {
+              const isSelected = riskStyle === style.id;
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => setRiskStyle(style.id as RiskStyle)}
+                  className={cn(
+                    "p-3.5 rounded-lg border text-left transition-colors",
+                    isSelected
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border hover:bg-muted/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={cn(
+                      "text-sm font-semibold capitalize",
+                      isSelected ? "text-primary" : "text-foreground"
+                    )}>
+                      {style.label}
+                    </span>
+                    {isSelected && <div className="h-2 w-2 rounded-full bg-primary" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {style.description}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -12,6 +12,10 @@ import {
   MessageSquare,
   X,
   Trash2,
+  Target,
+  FileText,
+  Eye,
+  Compass,
 } from "lucide-react";
 
 function SidebarShell({
@@ -92,21 +96,21 @@ function SimpleNavPanel({
 
 function DashboardPanel() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "all";
+  const location = useLocation();
   const activeText = "text-foreground";
   const activeBg = "bg-primary/20";
 
   const items = [
-    { key: "all", title: "All", subtitle: "Everything", icon: LayoutDashboard },
-    { key: "hedge_now", title: "Hedge Now", subtitle: "Act immediately", icon: LayoutDashboard },
-    { key: "watching", title: "Watching", subtitle: "Monitor", icon: LayoutDashboard },
+    { key: "recommendations", title: "Recommendations", subtitle: "Hedge suggestions", icon: Target, path: "/dashboard" },
+    { key: "exposure", title: "Exposure", subtitle: "Financial analysis", icon: FileText, path: "/dashboard/exposure" },
+    { key: "watching", title: "Watching", subtitle: "Monitored markets", icon: Eye, path: "/dashboard/watching" },
+    { key: "explore", title: "Explore Markets", subtitle: "Search & discover", icon: Compass, path: "/dashboard/explore" },
   ] as const;
 
   return (
     <div className="p-3 space-y-1">
       {items.map((item) => {
-        const active = activeTab === item.key;
+        const active = location.pathname === item.path;
         return (
           <Button
             key={item.key}
@@ -115,7 +119,7 @@ function DashboardPanel() {
               "w-full justify-start gap-3 h-12 rounded-lg items-start py-2",
               active && cn(activeBg, "border border-primary/30")
             )}
-            onClick={() => navigate(`/dashboard?tab=${item.key}`)}
+            onClick={() => navigate(item.path)}
           >
             <item.icon className={cn("h-4 w-4", active ? activeText : "text-muted-foreground")} />
             <div className="text-left leading-tight">
@@ -168,33 +172,33 @@ function HomeInfoPanel() {
             <Card className="glass shadow-xl rounded-xl overflow-hidden">
               <CardContent className="p-0">
                 <div className="p-6 pb-4 border-b border-border flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+          <div className="min-w-0">
                     <div className="text-xl font-bold tracking-tight">Welcome to Probable</div>
                     <div className="text-sm text-muted-foreground mt-1">
                       Home is where you turn a real-world risk into a hedge.
-                    </div>
-                  </div>
+            </div>
+          </div>
                   <DialogPrimitive.Close asChild>
                     <Button variant="ghost" size="icon" className="shrink-0 rounded-full">
                       <X className="h-4 w-4" />
                       <span className="sr-only">Close</span>
                     </Button>
                   </DialogPrimitive.Close>
-                </div>
+        </div>
 
                 <ScrollArea className="max-h-[70vh]">
                   <div className="p-6 pt-5 space-y-5">
                     <div className="text-sm text-muted-foreground leading-relaxed">
                       Probable helps you turn real-world uncertainty into actionable hedges.
                       Here’s the flow:
-                    </div>
+          </div>
 
                     <div className="space-y-3">
                       <div className="text-sm font-semibold">1) Generate your risk profile &amp; exposure</div>
                       <div className="text-sm text-muted-foreground leading-relaxed">
                         We build a baseline understanding of what you care about and where you’re exposed.
-                      </div>
-                    </div>
+        </div>
+      </div>
 
                     <div className="space-y-3">
                       <div className="text-sm font-semibold">2) Use Chat to talk about your risk</div>
@@ -226,26 +230,26 @@ function HomeInfoPanel() {
 
                     <div className="pt-2 grid gap-2 sm:grid-cols-2">
                       <DialogPrimitive.Close asChild>
-                        <Button
-                          className="w-full justify-start shadow-sm"
-                          onClick={() => navigate("/chat")}
-                        >
-                          <MessageSquare className="mr-2 h-4 w-4" />
+        <Button
+          className="w-full justify-start shadow-sm"
+          onClick={() => navigate("/chat")}
+        >
+          <MessageSquare className="mr-2 h-4 w-4" />
                           Open chat
-                        </Button>
+        </Button>
                       </DialogPrimitive.Close>
                       <DialogPrimitive.Close asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start shadow-sm bg-background"
-                          onClick={() => navigate("/dashboard")}
-                        >
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
+        <Button
+          variant="outline"
+          className="w-full justify-start shadow-sm bg-background"
+          onClick={() => navigate("/dashboard")}
+        >
+          <LayoutDashboard className="mr-2 h-4 w-4" />
                           Go to dashboard
-                        </Button>
+        </Button>
                       </DialogPrimitive.Close>
                     </div>
-                  </div>
+      </div>
                 </ScrollArea>
               </CardContent>
             </Card>
