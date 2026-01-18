@@ -2,11 +2,26 @@ import type { SearchResult } from '@/types/chat';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit & { timeoutMs?: number } = {}
+): Promise<Response> {
+  const { timeoutMs = 15000, ...rest } = init;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...rest, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function searchEvents(query: string) {
-  const res = await fetch(`${API_URL}/v1/search`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
+    timeoutMs: 15000,
   });
 
   if (!res.ok) {
@@ -33,10 +48,11 @@ export interface ChatMessageResponse {
 }
 
 export async function sendChatMessage(payload: ChatMessagePayload): Promise<ChatMessageResponse> {
-  const res = await fetch(`${API_URL}/v1/chat/message`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/chat/message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    timeoutMs: 30000,
   });
 
   if (!res.ok) {
@@ -63,10 +79,11 @@ export async function sendChatMessageStream(
   payload: ChatMessagePayload,
   onEvent: StreamCallback
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/v1/chat/message/stream`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/chat/message/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    timeoutMs: 30000,
   });
 
   if (!res.ok) {
@@ -144,9 +161,11 @@ export async function analyzeDocument(userId: string, file: File): Promise<Docum
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch(`${API_URL}/v1/profile/${userId}/analyze-document`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/profile/${userId}/analyze-document`, {
     method: "POST",
     body: formData,
+    // OpenAI + PDF conversion can take a while; still ensure it doesn't hang forever.
+    timeoutMs: 120000,
   });
 
   if (!res.ok) {
@@ -158,7 +177,9 @@ export async function analyzeDocument(userId: string, file: File): Promise<Docum
 }
 
 export async function getFinancialAnalysis(userId: string): Promise<any> {
-  const res = await fetch(`${API_URL}/v1/profile/${userId}/financial-analysis`);
+  const res = await fetchWithTimeout(`${API_URL}/v1/profile/${userId}/financial-analysis`, {
+    timeoutMs: 15000,
+  });
 
   if (!res.ok) {
     const text = await res.text();
@@ -169,8 +190,9 @@ export async function getFinancialAnalysis(userId: string): Promise<any> {
 }
 
 export async function deleteFinancialAnalysis(userId: string): Promise<void> {
-  const res = await fetch(`${API_URL}/v1/profile/${userId}/financial-analysis`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/profile/${userId}/financial-analysis`, {
     method: "DELETE",
+    timeoutMs: 15000,
   });
 
   if (!res.ok) {
@@ -193,7 +215,9 @@ export interface Notification {
 
 export async function getNotifications(userId: string, unreadOnly = false, limit = 50): Promise<Notification[]> {
   const params = new URLSearchParams({ unread_only: String(unreadOnly), limit: String(limit) });
-  const res = await fetch(`${API_URL}/v1/notifications/${userId}?${params}`);
+  const res = await fetchWithTimeout(`${API_URL}/v1/notifications/${userId}?${params}`, {
+    timeoutMs: 15000,
+  });
   
   if (!res.ok) {
     throw new Error(`Failed to fetch notifications: ${res.status}`);
@@ -203,8 +227,9 @@ export async function getNotifications(userId: string, unreadOnly = false, limit
 }
 
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  const res = await fetch(`${API_URL}/v1/notifications/${notificationId}/read`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/notifications/${notificationId}/read`, {
     method: "POST",
+    timeoutMs: 15000,
   });
   
   if (!res.ok) {
@@ -213,8 +238,9 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
 }
 
 export async function markAllNotificationsAsRead(userId: string): Promise<void> {
-  const res = await fetch(`${API_URL}/v1/notifications/${userId}/read-all`, {
+  const res = await fetchWithTimeout(`${API_URL}/v1/notifications/${userId}/read-all`, {
     method: "POST",
+    timeoutMs: 15000,
   });
   
   if (!res.ok) {
@@ -223,7 +249,9 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {
-  const res = await fetch(`${API_URL}/v1/notifications/${userId}/unread-count`);
+  const res = await fetchWithTimeout(`${API_URL}/v1/notifications/${userId}/unread-count`, {
+    timeoutMs: 15000,
+  });
   
   if (!res.ok) {
     throw new Error(`Failed to get unread count: ${res.status}`);

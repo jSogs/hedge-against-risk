@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Settings, User, Bell, Link2, CreditCard, Shield, LogOut } from "lucide-react";
+import { Settings, User, Bell, Link2, CreditCard, Shield, LogOut, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 interface SettingsModalProps {
   children?: React.ReactNode;
@@ -138,15 +139,65 @@ function AccountTab({ user }: { user: SupabaseUser | null }) {
   );
 }
 
+function ComingSoonPanel({
+  title,
+  description,
+  bullets,
+}: {
+  title: string;
+  description: string;
+  bullets: string[];
+}) {
+  return (
+    <div className="max-w-2xl">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-lg">{title}</h3>
+              <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                Coming soon
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-2">
+          {bullets.map((b) => (
+            <div key={b} className="flex items-start gap-2 text-sm">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/60" />
+              <span className="text-muted-foreground">{b}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex items-center gap-2">
+          <Button variant="outline" disabled className="bg-background">
+            Notify me
+          </Button>
+          <span className="text-xs text-muted-foreground">We’ll enable this in a future update.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsModal({ children, open, onOpenChange }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
   const { user, signOut } = useAuth();
 
-  const menuItems = [
+  const menuItems: Array<{
+    id: SettingsTab;
+    label: string;
+    icon: typeof User;
+    comingSoon?: boolean;
+  }> = [
     { id: "account", label: "Account", icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "integrations", label: "Integrations", icon: Link2 },
-    { id: "billing", label: "Billing", icon: CreditCard },
+    { id: "integrations", label: "Integrations", icon: Link2, comingSoon: true },
+    { id: "billing", label: "Billing", icon: CreditCard, comingSoon: true },
   ];
 
   return (
@@ -170,19 +221,28 @@ export function SettingsModal({ children, open, onOpenChange }: SettingsModalPro
           <nav className="flex flex-col gap-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as SettingsTab)}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
-                    activeTab === item.id
+                    isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    item.comingSoon && "opacity-80"
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.comingSoon && (
+                    <span className="flex items-center gap-1">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">Soon</span>
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -242,52 +302,27 @@ export function SettingsModal({ children, open, onOpenChange }: SettingsModalPro
             )}
 
             {activeTab === "integrations" && (
-              <div className="max-w-2xl space-y-6">
-                <div className="text-sm text-muted-foreground mb-4">
-                  Connect your accounts to let Probable analyze your portfolio and automate hedging.
-                </div>
-                
-                <div className="space-y-3">
-                  {[
-                    { name: "Kalshi", desc: "Execute event contracts directly.", connected: true, icon: "K" },
-                    { name: "Interactive Brokers", desc: "Import portfolio positions.", connected: false, icon: "IB" },
-                    { name: "Robinhood", desc: "Sync equity holdings.", connected: false, icon: "R" },
-                    { name: "Coinbase", desc: "Crypto asset coverage.", connected: false, icon: "C" },
-                  ].map((integration) => (
-                    <div key={integration.name} className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/20 transition-all group shadow-sm">
-                       <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center font-bold text-muted-foreground group-hover:text-primary transition-colors">
-                            {integration.icon}
-                          </div>
-                          <div>
-                            <div className="font-medium">{integration.name}</div>
-                            <div className="text-xs text-muted-foreground">{integration.desc}</div>
-                          </div>
-                       </div>
-                       <Button variant={integration.connected ? "outline" : "default"} size="sm" className={integration.connected ? "bg-background" : ""}>
-                          {integration.connected ? "Connected" : "Connect"}
-                       </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ComingSoonPanel
+                title="Integrations"
+                description="Connect accounts to let Probable analyze your exposure and generate better market-centric hedges."
+                bullets={[
+                  "Prediction market platform connections (e.g. Kalshi/Polymarket)",
+                  "Brokerage read-only imports (positions + cashflow context)",
+                  "Automatic reconciliation for exposure tracking",
+                ]}
+              />
             )}
 
             {activeTab === "billing" && (
-              <div className="max-w-xl space-y-6">
-                 <div className="p-6 rounded-2xl border border-border bg-gradient-to-br from-muted/50 to-transparent">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">Probable Free</h3>
-                        <p className="text-sm text-muted-foreground mt-1">Basic hedging recommendations.</p>
-                      </div>
-                      <Shield className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="mt-6">
-                       <Button>Upgrade to Pro</Button>
-                    </div>
-                 </div>
-              </div>
+              <ComingSoonPanel
+                title="Billing"
+                description="Plans, upgrades, and usage limits will live here."
+                bullets={[
+                  "Team/workspace management",
+                  "Usage-based limits for document analysis",
+                  "Pro features for market monitoring + alerts",
+                ]}
+              />
             )}
 
           </div>

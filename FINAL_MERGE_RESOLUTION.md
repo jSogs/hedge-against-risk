@@ -236,3 +236,8 @@ After these changes, verify:
 
 *This merge successfully combines the comprehensive financial features from main with the refined, modern UI/UX from the ui-+-data-fetch-changes branch.*
 
+
+
+
+
+

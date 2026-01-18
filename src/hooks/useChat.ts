@@ -30,7 +30,6 @@ async function enrichResultsWithSeriesTicker(results: SearchResult[]): Promise<S
 }
 
 export function useChat(userId: string | undefined) {
-  const debugStream = import.meta.env.DEV;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [deletedConversations, setDeletedConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
@@ -261,9 +260,6 @@ export function useChat(userId: string | undefined) {
             user_id: userId,
           },
           (event) => {
-            // Log all events to console for debugging
-            if (debugStream) console.log('[Stream Event]', event);
-            
             if (event.type === 'conversation_id') {
               newConversationId = event.data || '';
               
@@ -286,7 +282,6 @@ export function useChat(userId: string | undefined) {
               }
             } else if (event.type === 'thinking_start') {
               // Start a new thinking step
-              if (debugStream) console.log('[Thinking] Started new thinking step');
               currentThinkingStep = {
                 content: '',
                 timestamp: Date.now(),
@@ -304,7 +299,6 @@ export function useChat(userId: string | undefined) {
               // Add to current thinking step
               if (currentThinkingStep && event.content) {
                 currentThinkingStep.content += event.content;
-                if (debugStream) console.log('[Thinking] Content:', currentThinkingStep.content.substring(0, 50) + '...');
                 
                 // Update the message with the current thinking
                 setMessages((prev) =>
@@ -323,13 +317,11 @@ export function useChat(userId: string | undefined) {
               }
             } else if (event.type === 'thinking_end') {
               // Finalize the thinking step
-              if (debugStream) console.log('[Thinking] Ended thinking step');
               currentThinkingStep = null;
             } else if (event.type === 'output') {
               // Add to output content
               if (event.content) {
                 outputContent += event.content;
-                if (debugStream) console.log('[Output] Content:', outputContent.substring(0, 50) + '...');
                 
                 // Update the message with the current output
                 setMessages((prev) =>
@@ -342,7 +334,6 @@ export function useChat(userId: string | undefined) {
               }
             } else if (event.type === 'markets') {
               // Attach markets to the streaming message so the UI can render cards
-              if (debugStream) console.log('[Markets] Received markets event with', event.results?.length || 0, 'results');
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === streamingMessageId

@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { SearchBar } from "@/components/search/SearchBar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,10 +18,7 @@ import {
   MessageSquare,
   LayoutDashboard,
   User,
-  TrendingUp, 
   Loader2,
-  Cloud,
-  Zap,
   DollarSign,
   Thermometer,
   Briefcase,
@@ -30,16 +26,11 @@ import {
   Wheat,
   Plane,
   Building2,
-  Bitcoin,
-  Globe,
-  Activity,
-  Truck,
-  Home as HomeIcon,
   Users,
-  GraduationCap,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { EncryptedText } from "@/components/ui/encrypted-text";
+import { Badge } from "@/components/ui/badge";
 
 type Profile = Tables<"profiles">;
 
@@ -48,8 +39,6 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const bucketRef = useRef<HTMLDivElement>(null);
-  const [visibleCardIndices, setVisibleCardIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,25 +62,16 @@ export default function Home() {
     setLoading(false);
   };
 
-  // Rotate cards in and out every 8 seconds
-  useEffect(() => {
-    const totalCards = 16;
-    const cardsToShow = 8;
-    
-    const interval = setInterval(() => {
-      setVisibleCardIndices(prev => {
-        // Get next batch of indices
-        const startIndex = (prev[0] + 1) % totalCards;
-        const newIndices = [];
-        for (let i = 0; i < cardsToShow; i++) {
-          newIndices.push((startIndex + i) % totalCards);
-        }
-        return newIndices;
-      });
-    }, 8000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const hedgeExamples = [
+    { icon: Thermometer, title: "Energy & fuel", example: "Gas prices by year‑end", tags: ["Gas", "Oil"] },
+    { icon: DollarSign, title: "Rates & inflation", example: "CPI / rate decisions", tags: ["CPI", "Fed"] },
+    { icon: Wheat, title: "Food prices", example: "Staples and commodities", tags: ["Food", "Wheat"] },
+    { icon: Plane, title: "Travel demand", example: "Flights / tourism signals", tags: ["Travel"] },
+    { icon: Building2, title: "Real estate", example: "Housing & vacancy trends", tags: ["Housing"] },
+    { icon: Briefcase, title: "Supply chain", example: "Strikes, ports, disruptions", tags: ["Logistics"] },
+    { icon: ShoppingCart, title: "Retail demand", example: "Sales and consumer trends", tags: ["Retail"] },
+    { icon: Users, title: "Labor market", example: "Jobs and unemployment", tags: ["Jobs"] },
+  ] as const;
 
   if (authLoading || loading) {
     return (
@@ -122,20 +102,20 @@ export default function Home() {
 
   return (
     <ScrollArea className="h-full w-full">
-      <div className="flex flex-col min-h-full w-full max-w-6xl mx-auto px-6 py-12">
+      <div className="flex flex-col min-h-full w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Centered Hero / Search */}
-        <div className="mt-10 flex flex-col items-center text-center gap-6">
+        <div className="mt-6 sm:mt-10 flex flex-col items-center text-center gap-5 sm:gap-6">
           <div className="flex items-center justify-center min-h-[44px]">
             <EncryptedText
               text={`Welcome to Probable, ${displayName}`}
-              className="text-3xl font-medium"
+              className="text-2xl sm:text-3xl lg:text-4xl font-medium"
               encryptedClassName="text-muted-foreground"
               revealedClassName="text-foreground font-semibold"
               revealDelayMs={40}
             />
           </div>
 
-          <div className="max-w-2xl text-sm text-muted-foreground leading-relaxed">
+          <div className="max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
             Tell us what you want covered. We’ll suggest hedges — and a clear dollar amount to hedge.
           </div>
 
@@ -168,7 +148,7 @@ export default function Home() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 sm:w-96">
+            <SheetContent side="right" className="w-[92vw] max-w-sm sm:w-96">
               <SheetHeader>
                 <SheetTitle>Next steps</SheetTitle>
               </SheetHeader>
@@ -210,7 +190,7 @@ export default function Home() {
         </div>
 
         {/* Quick actions */}
-        <div className="mt-12 space-y-5">
+        <div className="mt-10 sm:mt-12 space-y-5">
           <div className="flex items-end justify-between">
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -273,253 +253,73 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Hedging Examples - Physics Bucket Animation */}
-        <div className="mt-16 mb-8">
-          <div className="text-center mb-8">
+        {/* What you can hedge */}
+        <div className="mt-14 sm:mt-16 mb-8">
+          <div className="text-center">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               What you can hedge
             </h2>
-            <p className="text-xs text-muted-foreground mt-2">
-              Beyond prices — hedge real events that impact your business · Drag to explore · New cards every 8s
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-2xl mx-auto">
+              Real-world risks you can map to prediction markets. Pick one to explore and we’ll fetch relevant markets.
             </p>
           </div>
 
-          {/* Bucket Container */}
-          <div className="relative mx-auto max-w-5xl">
-            {/* Bucket visual effect - curved bottom container */}
-            <div 
-              ref={bucketRef}
-              className="relative rounded-3xl border-4 border-primary/20 bg-gradient-to-b from-background/50 to-muted/30 backdrop-blur-sm overflow-hidden"
-              style={{ 
-                minHeight: '700px',
-                boxShadow: 'inset 0 -20px 40px -20px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Bucket items */}
-              <div className="absolute inset-0 p-4">
-                <AnimatePresence mode="popLayout">
-                {(() => {
-                  const allCards = [
-                    {
-                      icon: Cloud,
-                      title: "Weather Events",
-                      example: "Hurricane hits Southeast",
-                      color: "bg-blue-500/10",
-                    },
-                    {
-                      icon: Zap,
-                      title: "Policy Changes",
-                      example: "Minimum wage increase",
-                      color: "bg-yellow-500/10",
-                    },
-                    {
-                      icon: DollarSign,
-                      title: "Interest Rates",
-                      example: "Fed rate hike 0.5%+",
-                      color: "bg-green-500/10",
-                    },
-                    {
-                      icon: Thermometer,
-                      title: "Oil & Energy",
-                      example: "Oil over $100/barrel",
-                      color: "bg-red-500/10",
-                    },
-                    {
-                      icon: Briefcase,
-                      title: "Supply Chain",
-                      example: "Port strikes 2+ weeks",
-                      color: "bg-purple-500/10",
-                    },
-                    {
-                      icon: ShoppingCart,
-                      title: "Retail Trends",
-                      example: "Holiday sales under 5%",
-                      color: "bg-pink-500/10",
-                    },
-                    {
-                      icon: Wheat,
-                      title: "Food Prices",
-                      example: "Wheat prices spike 30%",
-                      color: "bg-orange-500/10",
-                    },
-                    {
-                      icon: Plane,
-                      title: "Travel Demand",
-                      example: "Flight bookings drop 25%",
-                      color: "bg-sky-500/10",
-                    },
-                    {
-                      icon: Building2,
-                      title: "Real Estate",
-                      example: "Commercial vacancy over 20%",
-                      color: "bg-indigo-500/10",
-                    },
-                    {
-                      icon: Bitcoin,
-                      title: "Crypto Volatility",
-                      example: "Bitcoin below $30k",
-                      color: "bg-amber-500/10",
-                    },
-                    {
-                      icon: Globe,
-                      title: "FX Exposure",
-                      example: "Dollar strengthens 10%+",
-                      color: "bg-teal-500/10",
-                    },
-                    {
-                      icon: Activity,
-                      title: "Market Volatility",
-                      example: "VIX exceeds 30",
-                      color: "bg-rose-500/10",
-                    },
-                    {
-                      icon: Truck,
-                      title: "Logistics Costs",
-                      example: "Shipping costs up 40%",
-                      color: "bg-cyan-500/10",
-                    },
-                    {
-                      icon: HomeIcon,
-                      title: "Mortgage Rates",
-                      example: "30-year fixed over 8%",
-                      color: "bg-emerald-500/10",
-                    },
-                    {
-                      icon: Users,
-                      title: "Labor Market",
-                      example: "Unemployment spikes to 6%",
-                      color: "bg-violet-500/10",
-                    },
-                    {
-                      icon: GraduationCap,
-                      title: "Education Costs",
-                      example: "Tuition increases 8%+",
-                      color: "bg-fuchsia-500/10",
-                    },
-                  ];
-
-                  // Grid-based positioning to prevent overlaps
-                  // 4 columns x 2 rows for 8 cards
-                  const positions = [
-                    { x: 30, y: 50 },    // Top-left
-                    { x: 230, y: 70 },   // Top-mid-left
-                    { x: 430, y: 90 },   // Top-mid-right
-                    { x: 630, y: 60 },   // Top-right
-                    { x: 30, y: 350 },   // Bottom-left
-                    { x: 230, y: 380 },  // Bottom-mid-left
-                    { x: 430, y: 360 },  // Bottom-mid-right
-                    { x: 630, y: 400 },  // Bottom-right
-                  ];
-
-                  return visibleCardIndices.map((cardIndex, posIndex) => {
-                    const item = allCards[cardIndex];
-                    const pos = positions[posIndex];
-                    
-                    return (
-                      <motion.div
-                        key={`${item.title}-${cardIndex}`}
-                        drag
-                        dragConstraints={bucketRef}
-                        dragElastic={0.15}
-                        dragTransition={{ 
-                          bounceStiffness: 500, 
-                          bounceDamping: 20,
-                          power: 0.15,
-                          min: 5,
-                          max: 50,
-                        }}
-                        initial={{ 
-                          opacity: 0, 
-                          scale: 0,
-                          x: pos.x,
-                          y: -250,
-                          rotate: Math.random() * 40 - 20,
-                        }}
-                        animate={{ 
-                          opacity: 1, 
-                          scale: 1,
-                          x: pos.x,
-                          y: pos.y,
-                          rotate: Math.random() * 8 - 4,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          scale: 0,
-                          y: 800,
-                          transition: { duration: 0.5 }
-                        }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 150,
-                          damping: 18,
-                          delay: posIndex * 0.08,
-                          mass: 0.8,
-                        }}
-                        whileHover={{ 
-                          scale: 1.05,
-                          rotate: 0,
-                          zIndex: 10,
-                          transition: { duration: 0.2 }
-                        }}
-                        whileDrag={{ 
-                          scale: 1.08,
-                          rotate: 3,
-                          cursor: "grabbing",
-                          zIndex: 20,
-                          transition: { duration: 0.1 }
-                        }}
-                        className="absolute cursor-grab active:cursor-grabbing"
-                        style={{ 
-                          width: '180px',
-                          touchAction: 'none',
-                        }}
-                      >
-                        <Card className={`h-full border-2 border-primary/30 ${item.color} backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow select-none`}>
-                          <CardHeader className="p-2.5">
-                            <div className="flex items-start gap-2">
-                              <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                                <item.icon className="h-3 w-3 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-[11px] font-semibold leading-tight">
-                                  {item.title}
-                                </CardTitle>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-2.5 pt-0">
-                            <div className="text-[9px] text-muted-foreground leading-snug">
-                              {item.example}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  });
-                })()}
-                </AnimatePresence>
-              </div>
-
-              {/* Bucket bottom curve effect */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-muted/50 to-transparent pointer-events-none" 
-                style={{
-                  borderRadius: '0 0 100% 100% / 0 0 30px 30px',
-                }}
-              />
+          {/* Mobile: horizontal scroll. Desktop: grid */}
+          <div className="mt-6 sm:mt-8">
+            <div className="flex gap-4 overflow-x-auto pb-2 sm:hidden snap-x snap-mandatory">
+              {hedgeExamples.map((item) => (
+                <Card
+                  key={item.title}
+                  className="min-w-[260px] snap-start bg-card border-border shadow-sm hover:border-primary/30 transition-colors"
+                >
+                  <CardHeader className="p-5 pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <item.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base font-medium">{item.title}</CardTitle>
+                        <CardDescription className="mt-1 text-sm">{item.example}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-5 pt-0 flex flex-wrap gap-2">
+                    {item.tags.map((t) => (
+                      <Badge key={t} variant="secondary" className="rounded-full">
+                        {t}
+                      </Badge>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            {/* Bucket label */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-              Drag to explore
+            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {hedgeExamples.map((item) => (
+                <Card
+                  key={item.title}
+                  className="bg-card border-border shadow-sm hover:border-primary/30 transition-colors"
+                >
+                  <CardHeader className="p-5 pb-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                      <item.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-base font-medium">{item.title}</CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2">{item.example}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-5 pt-0 flex flex-wrap gap-2">
+                    {item.tags.map((t) => (
+                      <Badge key={t} variant="secondary" className="rounded-full">
+                        {t}
+                      </Badge>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 1 }}
-            className="mt-12 text-center"
-          >
+          <div className="mt-8 text-center">
             <Button
               variant="ghost"
               size="sm"
@@ -529,7 +329,7 @@ export default function Home() {
               Explore more hedging scenarios
               <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
-          </motion.div>
+          </div>
         </div>
       </div>
     </ScrollArea>
