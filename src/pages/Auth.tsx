@@ -46,7 +46,7 @@ export default function Auth() {
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign in';
       setError(errorMessage);
     } finally {
@@ -90,7 +90,7 @@ export default function Auth() {
       if (data.user && !data.session) {
         setSuccess(true);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
       setError(errorMessage);
     } finally {
@@ -172,12 +172,12 @@ export default function Auth() {
       <MockBackground />
 
       {/* Blur Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background/80 to-primary/5 backdrop-blur-sm" />
-      <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background/70 to-primary/10 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px]" />
       
       {/* Centered Modal */}
       <div className="relative w-full max-w-md z-10">
-        <div className="bg-background/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl overflow-hidden">
+        <div className="bg-background/70 backdrop-blur-2xl border border-primary/15 ring-1 ring-white/10 shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden">
           {/* Header */}
           <div className="p-8 pb-6 text-center space-y-4">
             <div className="flex justify-center mb-2">

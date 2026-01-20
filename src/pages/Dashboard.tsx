@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, Clock, CheckCircle, Loader2, ExternalLink, DollarSign, X, Undo2, TrendingDown, ShieldCheck, FileText, Upload, AlertTriangle, Target, Search, Compass } from 'lucide-react';
 import { Json } from '@/integrations/supabase/types';
 import { logAction, getFinancialAnalysis } from '@/lib/api';
+import { API_URL } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileUpload } from '@/components/onboarding/FileUpload';
@@ -32,8 +33,6 @@ interface Recommendation {
   markets?: { title: string; url: string | null; category: string | null } | null;
   kalshi_events?: { title: string; subtitle: string | null; series_ticker: string | null } | null;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 async function runRecommendations(userId: string) {
   const res = await fetch(`${API_URL}/v1/recommendations/run`, {

@@ -10,8 +10,7 @@ import { motion } from 'framer-motion';
 import { MarketResultCard } from '@/components/chat/MarketResultCard';
 import type { SearchResult } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+import { API_URL } from '@/lib/config';
 
 async function searchMarketsApi(query: string, limit: number = 12) {
   const res = await fetch(`${API_URL}/v1/search`, {

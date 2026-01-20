@@ -16,8 +16,15 @@ export function MarketResultCard({ result }: MarketResultCardProps) {
   const platform = firstMarket?.platform || 'kalshi';
   
   let marketUrl = null;
-  if (platform === 'polymarket' && result.series_ticker) {
-    marketUrl = `https://polymarket.com/event/${result.series_ticker}`;
+  if (platform === 'polymarket') {
+    // Polymarket URLs typically need an event slug + market slug:
+    //   https://polymarket.com/event/<event-slug>/<market-slug>
+    // Our API sometimes only returns the market slug, so fall back to search.
+    if (result.series_ticker?.includes('/')) {
+      marketUrl = `https://polymarket.com/event/${result.series_ticker}`;
+    } else if (result.event_title) {
+      marketUrl = `https://polymarket.com/search?q=${encodeURIComponent(result.event_title)}`;
+    }
   } else if (result.series_ticker) {
     marketUrl = `https://kalshi.com/markets/${result.series_ticker}`;
   }
