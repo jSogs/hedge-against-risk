@@ -1,73 +1,49 @@
-# Welcome to your Lovable project
+# Probable (Frontend)
 
-## Project info
+Frontend web app for Probable (chat, dashboard, profile, onboarding).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Local development
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd hedge-against-risk
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Backend API configuration
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The frontend calls the backend using `VITE_API_URL`.
 
-**Use GitHub Codespaces**
+- **Local dev**: `VITE_API_URL=http://127.0.0.1:8000`
+- **Production**: `VITE_API_URL=https://probable-app-778917fd9925.herokuapp.com`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+If you forget to set `VITE_API_URL` in production on `probable.live`, the app will default to the Heroku backend instead of calling localhost.
 
-## What technologies are used for this project?
+## Auth redirect configuration (Supabase)
 
-This project is built with:
+In **Supabase → Authentication → URL Configuration**:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Site URL**: `https://probable.live`
+- **Additional Redirect URLs**:
+  - `https://probable.live`
+  - `https://www.probable.live`
+  - `http://localhost:5173`
+  - `http://127.0.0.1:5173`
 
-## How can I deploy this project?
+## Prevent 404s on refresh (SPA routing)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Client routes like `/chat`, `/dashboard/...`, `/profile` need an SPA fallback so refresh doesn’t 404.
 
-## Can I connect a custom domain to my Lovable project?
+This repo includes both common configs:
 
-Yes, you can!
+- `public/_redirects` (Netlify/Cloudflare Pages-style)
+- `vercel.json` (Vercel rewrites)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Make sure your hosting provider includes the relevant file in the deploy output.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Build
+
+```bash
+cd hedge-against-risk
+npm run build
+```
